@@ -388,7 +388,7 @@ difficultyButtons.forEach((b) => {
 });
 
 const notifyToggle = document.getElementById("notify-toggle");
-let notifyEnabled = readLS("n1v1_notify", "0") === "1";
+let notifyEnabled = readLS("n1v1_notify", "1") === "1";
 notifyToggle.checked = notifyEnabled;
 notifyToggle.addEventListener("change", () => {
   notifyEnabled = notifyToggle.checked;
@@ -423,6 +423,9 @@ secretBoxesEl.addEventListener("digitsenter", () => {
 
 menuContinueBtn.addEventListener("click", () => {
   writeLS("n1v1_name", nameInput.value.trim());
+  if (notifyEnabled && "Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
   secretBoxes = createDigitBoxes(secretBoxesEl, selectedLength);
   setupLengthHint.textContent = `Tu número secreto (${selectedLength} cifras)`;
   setupSubmitBtn.disabled = true;

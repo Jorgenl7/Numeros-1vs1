@@ -61,10 +61,9 @@ body {
 header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 28px;
-  position: relative;
 }
 
 header h1 {
@@ -72,6 +71,7 @@ header h1 {
   font-weight: 800;
   margin: 0;
   letter-spacing: -0.02em;
+  min-width: 0;
 }
 
 header h1 span {
@@ -80,13 +80,13 @@ header h1 span {
   background-clip: text;
   color: transparent;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .header-actions {
-  position: absolute;
-  right: 0;
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .icon-btn {
@@ -198,20 +198,48 @@ header h1 span {
 
 .difficulty-option {
   flex: 1;
-  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 6px 12px;
   background: var(--input-bg);
   border: 2px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--text);
   font-family: inherit;
-  font-weight: 600;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.difficulty-option:hover {
+  transform: translateY(-1px);
+}
+
+.difficulty-number {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.difficulty-caption {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
 }
 
 .difficulty-option.selected {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.difficulty-option.selected .difficulty-number {
+  color: var(--accent-strong);
+}
+
+.difficulty-option.selected .difficulty-caption {
   color: var(--accent-strong);
 }
 
@@ -721,8 +749,40 @@ header h1 span {
 }
 
 @media (max-width: 480px) {
+  body {
+    padding: 20px 12px;
+  }
+
+  header {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    row-gap: 8px;
+  }
+
+  header h1 {
+    font-size: 1.25rem;
+    order: 1;
+    flex-basis: 100%;
+    text-align: center;
+  }
+
+  .header-actions {
+    order: 2;
+  }
+
   .screen {
-    padding: 22px;
+    padding: 20px 16px;
+  }
+
+  .avatar-picker {
+    justify-content: center;
+  }
+
+  .avatar-option {
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
   }
 
   .digit-box {
@@ -731,7 +791,25 @@ header h1 span {
     font-size: 1.5rem;
   }
 
+  .my-secret-value {
+    font-size: 1.5rem;
+    letter-spacing: 5px;
+    padding: 6px 14px 6px 19px;
+  }
+
   .boards {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .digit-box {
+    width: 42px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+
+  .difficulty-number {
+    font-size: 1.3rem;
   }
 }
