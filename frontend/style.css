@@ -319,6 +319,15 @@ header h1 span {
   color: var(--muted);
 }
 
+.my-secret {
+  text-align: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+  letter-spacing: 2px;
+  margin: 0 0 16px;
+}
+
 .timer-track {
   height: 6px;
   background: #0b1120;

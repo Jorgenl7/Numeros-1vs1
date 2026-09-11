@@ -252,6 +252,7 @@ setupForm.addEventListener("submit", (e) => {
     return;
   }
   setupError.textContent = "";
+  mySecret = secret;
   socket.emit("join_game", { name: nameInput.value.trim(), secret });
   showScreen("waiting");
 });
@@ -270,6 +271,8 @@ socket.on("waiting_for_opponent", () => {
 
 const opponentLabel = document.getElementById("opponent-label");
 const scoreLabel = document.getElementById("score-label");
+const mySecretLabel = document.getElementById("my-secret-label");
+let mySecret = "";
 const turnIndicator = document.getElementById("turn-indicator");
 const guessBoxesEl = document.getElementById("guess-boxes");
 const guessBoxes = createDigitBoxes(guessBoxesEl);
@@ -321,6 +324,7 @@ function submitGuess() {
 
 socket.on("match_found", ({ opponentName, yourTurn, turnSeconds, scoreYou, scoreOpponent }) => {
   opponentLabel.textContent = `Rival: ${opponentName}`;
+  mySecretLabel.textContent = `Tu número secreto: ${mySecret}`;
   updateScoreLabel(scoreYou, scoreOpponent);
   myAttemptsList.innerHTML = "";
   opponentAttemptsList.innerHTML = "";
@@ -433,6 +437,7 @@ function confirmRematch() {
   }
   rematchError.textContent = "";
   resumeAudio();
+  mySecret = secret;
   socket.emit("request_rematch", { secret });
   rematchBoxes.setDisabled(true);
   rematchConfirmBtn.classList.add("hidden");
@@ -455,6 +460,7 @@ socket.on("rematch_started", ({ yourTurn, turnSeconds, scoreYou, scoreOpponent }
   myAttemptsList.innerHTML = "";
   opponentAttemptsList.innerHTML = "";
   guessError.textContent = "";
+  mySecretLabel.textContent = `Tu número secreto: ${mySecret}`;
   updateScoreLabel(scoreYou, scoreOpponent);
   sounds.match();
   setTurn(yourTurn, turnSeconds);
