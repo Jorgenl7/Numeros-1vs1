@@ -40,6 +40,31 @@ class Player:
 
 
 @dataclass
+class Lobby:
+    """Sala de amigos: primero se unen los dos jugadores, luego se elige la
+    dificultad (solo el anfitrión) y por último cada uno pone su secreto."""
+
+    code: str
+    host_sid: str
+    host_name: str
+    host_avatar: str
+    host_token: str
+    guest_sid: Optional[str] = None
+    guest_name: Optional[str] = None
+    guest_avatar: Optional[str] = None
+    guest_token: Optional[str] = None
+    length: Optional[int] = None
+    secrets: dict = field(default_factory=dict)  # sid -> secret
+
+    def other_sid(self, sid: str) -> Optional[str]:
+        if sid == self.host_sid:
+            return self.guest_sid
+        if sid == self.guest_sid:
+            return self.host_sid
+        return None
+
+
+@dataclass
 class Room:
     id: str
     length: int
@@ -64,8 +89,8 @@ class GameManager:
         self.rooms: dict[str, Room] = {}
         self.sid_to_room: dict[str, str] = {}
         self.token_to_room: dict[str, str] = {}
-        self.pending_codes: dict[str, dict] = {}
-        self.sid_to_code: dict[str, str] = {}
+        self.lobbies: dict[str, Lobby] = {}
+        self.sid_to_lobby: dict[str, str] = {}
 
     def join(self, sid: str, name: str, secret: str, length: int, avatar: str, token: str):
         """Añade al jugador a la cola de su dificultad o, si ya había alguien esperando
@@ -73,7 +98,7 @@ class GameManager:
 
         Devuelve una tupla (estado, room) donde estado es "waiting" o "matched".
         """
-        self.cancel_room_code(sid)
+        self.cancel_lobby(sid)
         pending = self.waiting.get(length)
         if pending is None:
             self.waiting[length] = {
@@ -210,60 +235,107 @@ class GameManager:
         room.last_result = None
         return "started", room
 
-    def create_room_code(self, sid: str, name: str, secret: str, length: int, avatar: str, token: str) -> str:
-        """Crea una sala privada pendiente de que un amigo se una con el código."""
+    def create_lobby(self, sid: str, name: str, avatar: str, token: str) -> str:
+        """Crea una sala de amigos vacía, pendiente de que se una un invitado."""
         self.cancel_waiting(sid)
-        self.cancel_room_code(sid)
+        self.cancel_lobby(sid)
         code = generate_room_code()
-        while code in self.pending_codes:
+        while code in self.lobbies:
             code = generate_room_code()
-        self.pending_codes[code] = {
-            "sid": sid,
-            "name": name,
-            "secret": secret,
-            "avatar": avatar,
-            "length": length,
-            "token": token,
-        }
-        self.sid_to_code[sid] = code
+        self.lobbies[code] = Lobby(code=code, host_sid=sid, host_name=name, host_avatar=avatar, host_token=token)
+        self.sid_to_lobby[sid] = code
         return code
 
-    def peek_room_code(self, code: str) -> Optional[dict]:
-        return self.pending_codes.get(code)
+    def get_lobby(self, sid: str) -> Optional[Lobby]:
+        code = self.sid_to_lobby.get(sid)
+        return self.lobbies.get(code) if code else None
 
-    def cancel_room_code(self, sid: str) -> Optional[str]:
-        code = self.sid_to_code.pop(sid, None)
-        if code:
-            self.pending_codes.pop(code, None)
-        return code
-
-    def join_room_code(self, code: str, sid: str, name: str, secret: str, avatar: str, token: str) -> Optional[Room]:
-        """Une a un jugador a la sala privada de `code`. Devuelve la Room creada, o None si no procede."""
-        pending = self.pending_codes.get(code)
-        if not pending or pending["sid"] == sid:
+    def join_lobby(self, code: str, sid: str, name: str, avatar: str, token: str) -> Optional[Lobby]:
+        """Une a un segundo jugador a la sala `code`. Devuelve la Lobby, o None si no procede."""
+        lobby = self.lobbies.get(code)
+        if not lobby or lobby.guest_sid is not None or lobby.host_sid == sid:
             return None
 
-        del self.pending_codes[code]
-        self.sid_to_code.pop(pending["sid"], None)
+        self.cancel_waiting(sid)
+        self.cancel_lobby(sid)
+        lobby = self.lobbies.get(code)
+        if not lobby or lobby.guest_sid is not None:
+            return None
+
+        lobby.guest_sid = sid
+        lobby.guest_name = name
+        lobby.guest_avatar = avatar
+        lobby.guest_token = token
+        self.sid_to_lobby[sid] = code
+        return lobby
+
+    def set_lobby_length(self, sid: str, length: int) -> Optional[Lobby]:
+        """Fija la dificultad de la sala. Solo el anfitrión puede hacerlo."""
+        lobby = self.get_lobby(sid)
+        if not lobby or lobby.host_sid != sid or lobby.guest_sid is None:
+            return None
+        lobby.length = length
+        lobby.secrets = {}
+        return lobby
+
+    def submit_lobby_secret(self, sid: str, secret: str):
+        """Registra el secreto de un jugador de la sala.
+
+        Devuelve (estado, dato) con estado "waiting" (dato=Lobby) o "started" (dato=Room),
+        o None si no procede.
+        """
+        lobby = self.get_lobby(sid)
+        if not lobby or lobby.length is None or lobby.guest_sid is None:
+            return None
+        if sid not in (lobby.host_sid, lobby.guest_sid):
+            return None
+
+        lobby.secrets[sid] = secret
+        if len(lobby.secrets) < 2:
+            return "waiting", lobby
+
+        del self.lobbies[lobby.code]
+        self.sid_to_lobby.pop(lobby.host_sid, None)
+        self.sid_to_lobby.pop(lobby.guest_sid, None)
 
         room_id = uuid.uuid4().hex[:8]
         p1 = Player(
-            sid=pending["sid"],
-            name=pending["name"],
-            secret=pending["secret"],
-            avatar=pending["avatar"],
-            token=pending["token"],
+            sid=lobby.host_sid,
+            name=lobby.host_name,
+            secret=lobby.secrets[lobby.host_sid],
+            avatar=lobby.host_avatar,
+            token=lobby.host_token,
         )
-        p2 = Player(sid=sid, name=name, secret=secret, avatar=avatar, token=token)
+        p2 = Player(
+            sid=lobby.guest_sid,
+            name=lobby.guest_name,
+            secret=lobby.secrets[lobby.guest_sid],
+            avatar=lobby.guest_avatar,
+            token=lobby.guest_token,
+        )
         first_sid = random.choice([p1.sid, p2.sid])
 
-        room = Room(id=room_id, length=pending["length"], players={p1.sid: p1, p2.sid: p2}, turn_sid=first_sid)
+        room = Room(id=room_id, length=lobby.length, players={p1.sid: p1, p2.sid: p2}, turn_sid=first_sid)
         self.rooms[room_id] = room
         self.sid_to_room[p1.sid] = room_id
         self.sid_to_room[p2.sid] = room_id
         self.token_to_room[p1.token] = room_id
         self.token_to_room[p2.token] = room_id
-        return room
+        return "started", room
+
+    def cancel_lobby(self, sid: str) -> Optional[str]:
+        """Cierra la sala de amigos de `sid` (si la hay) y devuelve el sid del otro
+        jugador (si ya se había unido), para poder avisarle."""
+        code = self.sid_to_lobby.pop(sid, None)
+        if not code:
+            return None
+        lobby = self.lobbies.pop(code, None)
+        if not lobby:
+            return None
+        other_sid = lobby.other_sid(sid)
+        if other_sid:
+            self.sid_to_lobby.pop(other_sid, None)
+        return other_sid
 
     def remove_room(self, room_id: str) -> None:
         room = self.rooms.pop(room_id, None)
@@ -272,16 +344,20 @@ class GameManager:
                 self.sid_to_room.pop(player.sid, None)
                 self.token_to_room.pop(player.token, None)
 
-    def disconnect(self, sid: str) -> Optional[Room]:
-        """Gestiona la desconexión de un socket: sale de la cola, o marca su sala
-        como pendiente de reconexión (no se borra al instante)."""
+    def disconnect(self, sid: str):
+        """Gestiona la desconexión de un socket: sale de la cola, cierra su sala de
+        amigos pendiente (si la había) y marca su partida como pendiente de
+        reconexión (no se borra al instante).
+
+        Devuelve (room, lobby_other_sid): `room` si estaba en una partida activa,
+        y el sid del otro jugador de su sala de amigos (si la había) para avisarle.
+        """
         self.cancel_waiting(sid)
-        self.cancel_room_code(sid)
+        lobby_other_sid = self.cancel_lobby(sid)
         room = self.get_room(sid)
-        if not room:
-            return None
-        room.disconnected_sid = sid
-        return room
+        if room:
+            room.disconnected_sid = sid
+        return room, lobby_other_sid
 
     def finalize_disconnect(self, room_id: str, sid: str) -> Optional[Room]:
         """Tras agotarse el tiempo de gracia sin reconexión, cierra la sala definitivamente."""

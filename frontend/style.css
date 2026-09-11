@@ -313,6 +313,60 @@ header h1 span {
   margin: 16px 0 20px;
 }
 
+.lobby-players {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 8px 0 26px;
+}
+
+.lobby-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.lobby-player-avatar {
+  font-size: 1.8rem;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--input-bg);
+  border: 2px solid var(--card-border);
+  border-radius: 50%;
+}
+
+.lobby-player span:last-child {
+  font-weight: 700;
+  font-size: 0.95rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lobby-vs {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+#lobby-host-controls {
+  margin-top: 4px;
+}
+
+#lobby-guest-waiting {
+  margin-top: 4px;
+}
+
 .secondary-btn {
   display: block;
   width: 100%;
@@ -347,6 +401,7 @@ header h1 span {
 #profile-screen h2,
 #join-code-screen h2,
 #room-code-screen h2,
+#lobby-screen h2,
 #secret-setup-screen h2 {
   text-align: center;
   margin-top: 0;

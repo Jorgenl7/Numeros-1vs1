@@ -118,7 +118,15 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
-    room = games.disconnect(sid)
+    room, lobby_other_sid = games.disconnect(sid)
+
+    if lobby_other_sid:
+        await sio.emit(
+            "lobby_cancelled",
+            {"message": "Tu amigo se ha desconectado. Vuelve a intentarlo."},
+            to=lobby_other_sid,
+        )
+
     if room is None:
         return
 
@@ -158,57 +166,28 @@ async def join_game(sid, data):
     await start_room(room)
 
 
+def lobby_ready_payload(lobby, sid):
+    is_host = sid == lobby.host_sid
+    return {
+        "isHost": is_host,
+        "opponentName": lobby.guest_name if is_host else lobby.host_name,
+        "opponentAvatar": lobby.guest_avatar if is_host else lobby.host_avatar,
+    }
+
+
 @sio.event
 async def create_room(sid, data):
     data = data or {}
     name = sanitize_name(data.get("name"))
     avatar = sanitize_avatar(data.get("avatar"))
     token = str(data.get("token") or "").strip()
-    secret = str(data.get("secret") or "").strip()
-    length = sanitize_length(data.get("length"))
 
     if not token:
         await sio.emit("join_error", {"message": "Falta identificador de sesión. Recarga la página."}, to=sid)
         return
 
-    if not is_valid_number(secret, length):
-        await sio.emit(
-            "join_error",
-            {"message": f"El número secreto debe tener exactamente {length} cifras (0-9)."},
-            to=sid,
-        )
-        return
-
-    code = games.create_room_code(sid, name, secret, length, avatar, token)
-    await sio.emit("room_created", {"code": code, "length": length}, to=sid)
-
-
-@sio.event
-async def cancel_room_code(sid, data=None):
-    games.cancel_room_code(sid)
-
-
-@sio.event
-async def check_room_code(sid, data):
-    data = data or {}
-    code = str(data.get("code") or "").strip().upper()
-    pending = games.peek_room_code(code)
-
-    if not pending:
-        await sio.emit("room_code_checked", {"valid": False}, to=sid)
-        return
-
-    await sio.emit(
-        "room_code_checked",
-        {
-            "valid": True,
-            "code": code,
-            "length": pending["length"],
-            "creatorName": pending["name"],
-            "creatorAvatar": pending["avatar"],
-        },
-        to=sid,
-    )
+    code = games.create_lobby(sid, name, avatar, token)
+    await sio.emit("room_created", {"code": code}, to=sid)
 
 
 @sio.event
@@ -218,31 +197,68 @@ async def join_room(sid, data):
     name = sanitize_name(data.get("name"))
     avatar = sanitize_avatar(data.get("avatar"))
     token = str(data.get("token") or "").strip()
-    secret = str(data.get("secret") or "").strip()
-
-    pending = games.peek_room_code(code)
-    if not pending:
-        await sio.emit("join_room_error", {"message": "Ese código ya no está disponible."}, to=sid)
-        return
 
     if not token:
         await sio.emit("join_room_error", {"message": "Falta identificador de sesión. Recarga la página."}, to=sid)
         return
 
-    if not is_valid_number(secret, pending["length"]):
+    lobby = games.join_lobby(code, sid, name, avatar, token)
+    if lobby is None:
+        await sio.emit("join_room_error", {"message": "Ese código no es válido o ya no está disponible."}, to=sid)
+        return
+
+    await sio.emit("lobby_ready", lobby_ready_payload(lobby, lobby.host_sid), to=lobby.host_sid)
+    await sio.emit("lobby_ready", lobby_ready_payload(lobby, lobby.guest_sid), to=lobby.guest_sid)
+
+
+@sio.event
+async def set_lobby_length(sid, data):
+    data = data or {}
+    length = sanitize_length(data.get("length"))
+
+    lobby = games.set_lobby_length(sid, length)
+    if lobby is None:
+        return
+
+    await sio.emit("lobby_length_set", {"length": length}, to=lobby.host_sid)
+    await sio.emit("lobby_length_set", {"length": length}, to=lobby.guest_sid)
+
+
+@sio.event
+async def submit_lobby_secret(sid, data):
+    data = data or {}
+    secret = str(data.get("secret") or "").strip()
+
+    lobby = games.get_lobby(sid)
+    length = lobby.length if lobby and lobby.length else DEFAULT_LENGTH
+
+    if not is_valid_number(secret, length):
         await sio.emit(
-            "join_room_error",
-            {"message": f"El número secreto debe tener exactamente {pending['length']} cifras (0-9)."},
+            "lobby_secret_error",
+            {"message": f"El número secreto debe tener exactamente {length} cifras (0-9)."},
             to=sid,
         )
         return
 
-    room = games.join_room_code(code, sid, name, secret, avatar, token)
-    if room is None:
-        await sio.emit("join_room_error", {"message": "No puedes unirte a tu propia partida."}, to=sid)
+    result = games.submit_lobby_secret(sid, secret)
+    if result is None:
+        await sio.emit("lobby_cancelled", {"message": "La sala ya no está disponible."}, to=sid)
         return
 
-    await start_room(room)
+    status, payload = result
+
+    if status == "waiting":
+        await sio.emit("lobby_waiting_secret", {}, to=sid)
+        return
+
+    await start_room(payload)
+
+
+@sio.event
+async def cancel_lobby(sid, data=None):
+    other_sid = games.cancel_lobby(sid)
+    if other_sid:
+        await sio.emit("lobby_cancelled", {"message": "Tu amigo ha cancelado la sala."}, to=other_sid)
 
 
 @sio.event

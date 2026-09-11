@@ -107,7 +107,7 @@
       <p class="muted">Introduce el código que te ha compartido tu amigo</p>
       <input type="text" id="join-code-input" class="code-input" maxlength="5" placeholder="ABCDE" autocomplete="off" />
       <p class="error" id="join-code-error"></p>
-      <button type="button" id="join-code-check-btn" class="primary-btn">Comprobar código</button>
+      <button type="button" id="join-code-check-btn" class="primary-btn">Unirme</button>
       <button type="button" id="join-code-back-btn" class="link-btn">← Volver</button>
     </section>
 
@@ -121,6 +121,47 @@
       <div class="spinner"></div>
       <p class="muted">Esperando a que tu amigo se una...</p>
       <button type="button" id="room-code-cancel-btn" class="link-btn">Cancelar</button>
+    </section>
+
+    <section id="lobby-screen" class="screen hidden">
+      <h2>Sala de amigos</h2>
+
+      <div class="lobby-players">
+        <div class="lobby-player">
+          <span class="lobby-player-avatar" id="lobby-you-avatar">🙂</span>
+          <span id="lobby-you-name">Tú</span>
+        </div>
+        <span class="lobby-vs">VS</span>
+        <div class="lobby-player">
+          <span class="lobby-player-avatar" id="lobby-opponent-avatar">🙂</span>
+          <span id="lobby-opponent-name">Rival</span>
+        </div>
+      </div>
+
+      <div id="lobby-host-controls" class="hidden">
+        <label class="field-label">Elige la dificultad</label>
+        <div id="lobby-difficulty-picker" class="difficulty-picker">
+          <button type="button" class="difficulty-option" data-length="3">
+            <span class="difficulty-number">3</span>
+            <span class="difficulty-caption">cifras</span>
+          </button>
+          <button type="button" class="difficulty-option" data-length="4">
+            <span class="difficulty-number">4</span>
+            <span class="difficulty-caption">cifras</span>
+          </button>
+          <button type="button" class="difficulty-option" data-length="5">
+            <span class="difficulty-number">5</span>
+            <span class="difficulty-caption">cifras</span>
+          </button>
+        </div>
+        <button type="button" id="lobby-confirm-length-btn" class="primary-btn">Continuar</button>
+      </div>
+
+      <p id="lobby-guest-waiting" class="muted hidden">
+        Esperando a que el anfitrión elija la dificultad...
+      </p>
+
+      <button type="button" id="lobby-cancel-btn" class="link-btn">Cancelar</button>
     </section>
 
     <section id="secret-setup-screen" class="screen hidden">
@@ -149,6 +190,7 @@
       <div id="secret-boxes" class="digit-boxes"></div>
       <p class="error" id="setup-error"></p>
       <button type="button" id="setup-submit-btn" class="primary-btn" disabled>Buscar partida</button>
+      <p id="setup-lobby-status" class="muted hidden">Esperando a que tu amigo elija su número...</p>
       <button type="button" id="setup-back-btn" class="link-btn">← Volver</button>
     </section>
 
