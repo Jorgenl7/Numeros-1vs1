@@ -164,33 +164,37 @@
       <button type="button" id="lobby-cancel-btn" class="link-btn">Cancelar</button>
     </section>
 
+    <section id="quickmatch-screen" class="screen hidden">
+      <h2>Buscar Rival</h2>
+      <label class="field-label">Dificultad (cifras del número secreto)</label>
+      <div id="difficulty-picker" class="difficulty-picker">
+        <button type="button" class="difficulty-option" data-length="3">
+          <span class="difficulty-number">3</span>
+          <span class="difficulty-caption">cifras</span>
+        </button>
+        <button type="button" class="difficulty-option" data-length="4">
+          <span class="difficulty-number">4</span>
+          <span class="difficulty-caption">cifras</span>
+        </button>
+        <button type="button" class="difficulty-option" data-length="5">
+          <span class="difficulty-number">5</span>
+          <span class="difficulty-caption">cifras</span>
+        </button>
+      </div>
+      <p class="error" id="quickmatch-error"></p>
+      <button type="button" id="quickmatch-search-btn" class="primary-btn">Buscar partida</button>
+      <button type="button" id="quickmatch-back-btn" class="link-btn">← Volver</button>
+    </section>
+
     <section id="secret-setup-screen" class="screen hidden">
       <h2 id="secret-setup-title">Elige tu número secreto</h2>
-      <p id="setup-join-info" class="muted hidden"></p>
-
-      <div id="secret-setup-difficulty">
-        <label class="field-label">Dificultad (cifras del número secreto)</label>
-        <div id="difficulty-picker" class="difficulty-picker">
-          <button type="button" class="difficulty-option" data-length="3">
-            <span class="difficulty-number">3</span>
-            <span class="difficulty-caption">cifras</span>
-          </button>
-          <button type="button" class="difficulty-option" data-length="4">
-            <span class="difficulty-number">4</span>
-            <span class="difficulty-caption">cifras</span>
-          </button>
-          <button type="button" class="difficulty-option" data-length="5">
-            <span class="difficulty-number">5</span>
-            <span class="difficulty-caption">cifras</span>
-          </button>
-        </div>
-      </div>
+      <p id="setup-join-info" class="muted"></p>
 
       <p class="muted" id="setup-length-hint">Tu número secreto (4 cifras)</p>
       <div id="secret-boxes" class="digit-boxes"></div>
       <p class="error" id="setup-error"></p>
-      <button type="button" id="setup-submit-btn" class="primary-btn" disabled>Buscar partida</button>
-      <p id="setup-lobby-status" class="muted hidden">Esperando a que tu amigo elija su número...</p>
+      <button type="button" id="setup-submit-btn" class="primary-btn" disabled>Confirmar</button>
+      <p id="setup-lobby-status" class="muted hidden">Esperando a que tu rival elija su número...</p>
       <button type="button" id="setup-back-btn" class="link-btn">← Volver</button>
     </section>
 

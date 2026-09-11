@@ -70,10 +70,12 @@ de victoria hasta que la partida termina.
 
 ## Cómo funciona el emparejamiento
 
-**Buscar Rival**: al elegir dificultad y número secreto, el jugador entra en
-una cola de espera en memoria del servidor (una por cada dificultad). En
-cuanto hay dos jugadores esperando con la misma dificultad, se crea una sala
-y empieza la partida (el primer turno se decide al azar).
+**Buscar Rival**: primero se elige la dificultad y el jugador entra en una
+cola de espera en memoria del servidor (una por cada dificultad), sin haber
+elegido aún su número secreto. En cuanto hay dos jugadores esperando con la
+misma dificultad, se emparejan (ya viéndose el nombre y avatar del rival) y
+solo entonces cada uno elige su número secreto; la partida empieza en cuanto
+ambos lo han enviado (el primer turno se decide al azar).
 
 **Jugar con Amigos**: "Crear partida" genera un código de 5 caracteres (y un
 enlace `?room=CÓDIGO`) y deja al creador esperando. "Unirme con código"

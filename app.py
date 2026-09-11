@@ -142,28 +142,28 @@ async def join_game(sid, data):
     name = sanitize_name(data.get("name"))
     avatar = sanitize_avatar(data.get("avatar"))
     token = str(data.get("token") or "").strip()
-    secret = str(data.get("secret") or "").strip()
     length = sanitize_length(data.get("length"))
 
     if not token:
         await sio.emit("join_error", {"message": "Falta identificador de sesión. Recarga la página."}, to=sid)
         return
 
-    if not is_valid_number(secret, length):
-        await sio.emit(
-            "join_error",
-            {"message": f"El número secreto debe tener exactamente {length} cifras (0-9)."},
-            to=sid,
-        )
-        return
-
-    status, room = games.join(sid, name, secret, length, avatar, token)
+    status, lobby = games.join(sid, name, length, avatar, token)
 
     if status == "waiting":
         await sio.emit("waiting_for_opponent", {}, to=sid)
         return
 
-    await start_room(room)
+    await sio.emit(
+        "quickmatch_paired",
+        {"length": lobby.length, "opponentName": lobby.guest_name, "opponentAvatar": lobby.guest_avatar},
+        to=lobby.host_sid,
+    )
+    await sio.emit(
+        "quickmatch_paired",
+        {"length": lobby.length, "opponentName": lobby.host_name, "opponentAvatar": lobby.host_avatar},
+        to=lobby.guest_sid,
+    )
 
 
 def lobby_ready_payload(lobby, sid):

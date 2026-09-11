@@ -92,11 +92,13 @@ class GameManager:
         self.lobbies: dict[str, Lobby] = {}
         self.sid_to_lobby: dict[str, str] = {}
 
-    def join(self, sid: str, name: str, secret: str, length: int, avatar: str, token: str):
+    def join(self, sid: str, name: str, length: int, avatar: str, token: str):
         """Añade al jugador a la cola de su dificultad o, si ya había alguien esperando
-        con la misma dificultad, crea la partida.
+        con la misma dificultad, los une directamente en una Lobby ya completa
+        (mismo mecanismo que "jugar con amigos", pero emparejados al azar),
+        pendiente solo de que cada uno elija su número secreto.
 
-        Devuelve una tupla (estado, room) donde estado es "waiting" o "matched".
+        Devuelve una tupla (estado, lobby) donde estado es "waiting" o "matched".
         """
         self.cancel_lobby(sid)
         pending = self.waiting.get(length)
@@ -104,7 +106,6 @@ class GameManager:
             self.waiting[length] = {
                 "sid": sid,
                 "name": name,
-                "secret": secret,
                 "avatar": avatar,
                 "token": token,
             }
@@ -112,24 +113,26 @@ class GameManager:
 
         del self.waiting[length]
 
-        room_id = uuid.uuid4().hex[:8]
-        p1 = Player(
-            sid=pending["sid"],
-            name=pending["name"],
-            secret=pending["secret"],
-            avatar=pending["avatar"],
-            token=pending["token"],
-        )
-        p2 = Player(sid=sid, name=name, secret=secret, avatar=avatar, token=token)
-        first_sid = random.choice([p1.sid, p2.sid])
+        code = generate_room_code()
+        while code in self.lobbies:
+            code = generate_room_code()
 
-        room = Room(id=room_id, length=length, players={p1.sid: p1, p2.sid: p2}, turn_sid=first_sid)
-        self.rooms[room_id] = room
-        self.sid_to_room[p1.sid] = room_id
-        self.sid_to_room[p2.sid] = room_id
-        self.token_to_room[p1.token] = room_id
-        self.token_to_room[p2.token] = room_id
-        return "matched", room
+        lobby = Lobby(
+            code=code,
+            host_sid=pending["sid"],
+            host_name=pending["name"],
+            host_avatar=pending["avatar"],
+            host_token=pending["token"],
+            guest_sid=sid,
+            guest_name=name,
+            guest_avatar=avatar,
+            guest_token=token,
+            length=length,
+        )
+        self.lobbies[code] = lobby
+        self.sid_to_lobby[pending["sid"]] = code
+        self.sid_to_lobby[sid] = code
+        return "matched", lobby
 
     def cancel_waiting(self, sid: str) -> None:
         for length, pending in list(self.waiting.items()):

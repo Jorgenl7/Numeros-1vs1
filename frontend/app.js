@@ -229,6 +229,7 @@ const screens = {
   home: document.getElementById("home-screen"),
   profile: document.getElementById("profile-screen"),
   settings: document.getElementById("settings-screen"),
+  quickmatch: document.getElementById("quickmatch-screen"),
   friends: document.getElementById("friends-screen"),
   joinCode: document.getElementById("join-code-screen"),
   roomCode: document.getElementById("room-code-screen"),
@@ -318,7 +319,11 @@ function goHome() {
   showScreen("home");
 }
 
-findMatchBtn.addEventListener("click", () => openSecretSetup("quickmatch"));
+findMatchBtn.addEventListener("click", () => {
+  refreshDifficultyButtons();
+  quickmatchError.textContent = "";
+  showScreen("quickmatch");
+});
 playFriendsBtn.addEventListener("click", () => showScreen("friends"));
 homeProfileSummary.addEventListener("click", openProfile);
 openProfileBtn.addEventListener("click", openProfile);
@@ -568,34 +573,20 @@ socket.on("lobby_ready", ({ isHost, opponentName, opponentAvatar }) => {
 });
 
 socket.on("lobby_length_set", ({ length }) => {
-  openSecretSetup("lobby", { length, opponentName: lobbyOpponentName.textContent, opponentAvatar: lobbyOpponentAvatar.textContent });
+  openSecretSetup({ length, opponentName: lobbyOpponentName.textContent, opponentAvatar: lobbyOpponentAvatar.textContent });
 });
 
 socket.on("lobby_cancelled", ({ message }) => {
-  alert(message || "La sala de amigos se ha cerrado.");
+  alert(message || "La sala se ha cerrado.");
   goHome();
 });
 
-/* ---------- Pantalla de elección de secreto (compartida) ---------- */
-
-const secretSetupTitle = document.getElementById("secret-setup-title");
-const setupJoinInfo = document.getElementById("setup-join-info");
-const secretSetupDifficultyEl = document.getElementById("secret-setup-difficulty");
-const setupLengthHint = document.getElementById("setup-length-hint");
-const setupError = document.getElementById("setup-error");
-const setupSubmitBtn = document.getElementById("setup-submit-btn");
-const setupBackBtn = document.getElementById("setup-back-btn");
-const setupLobbyStatus = document.getElementById("setup-lobby-status");
-const secretBoxesEl = document.getElementById("secret-boxes");
-let secretBoxes = null;
+/* ---------- Buscar Rival (emparejamiento aleatorio por dificultad) ---------- */
 
 const difficultyPicker = document.getElementById("difficulty-picker");
 const difficultyButtons = Array.from(difficultyPicker.querySelectorAll(".difficulty-option"));
 let selectedLength = parseInt(readLS("n1v1_length", "4"), 10);
 if (![3, 4, 5].includes(selectedLength)) selectedLength = 4;
-
-let secretSetupMode = "quickmatch";
-let setupLength = selectedLength;
 
 function refreshDifficultyButtons() {
   difficultyButtons.forEach((b) => {
@@ -609,9 +600,46 @@ difficultyButtons.forEach((b) => {
     selectedLength = parseInt(b.dataset.length, 10);
     writeLS("n1v1_length", String(selectedLength));
     refreshDifficultyButtons();
-    rebuildSecretBoxes(selectedLength);
   });
 });
+
+const quickmatchError = document.getElementById("quickmatch-error");
+const quickmatchSearchBtn = document.getElementById("quickmatch-search-btn");
+const quickmatchBackBtn = document.getElementById("quickmatch-back-btn");
+
+quickmatchSearchBtn.addEventListener("click", () => {
+  resumeAudio();
+  myToken = generateToken();
+  myName = readLS("n1v1_name", "").trim() || "Jugador";
+  myAvatar = selectedAvatar;
+  socket.emit("join_game", { name: myName, avatar: myAvatar, length: selectedLength, token: myToken });
+  waitingText.textContent = "Buscando rival...";
+  showScreen("waiting");
+});
+
+quickmatchBackBtn.addEventListener("click", goHome);
+
+socket.on("join_error", ({ message }) => {
+  quickmatchError.textContent = message;
+  showScreen("quickmatch");
+});
+
+socket.on("quickmatch_paired", ({ length, opponentName, opponentAvatar }) => {
+  openSecretSetup({ length, opponentName, opponentAvatar });
+});
+
+/* ---------- Pantalla de elección de secreto (compartida) ---------- */
+
+const secretSetupTitle = document.getElementById("secret-setup-title");
+const setupJoinInfo = document.getElementById("setup-join-info");
+const setupLengthHint = document.getElementById("setup-length-hint");
+const setupError = document.getElementById("setup-error");
+const setupSubmitBtn = document.getElementById("setup-submit-btn");
+const setupBackBtn = document.getElementById("setup-back-btn");
+const setupLobbyStatus = document.getElementById("setup-lobby-status");
+const secretBoxesEl = document.getElementById("secret-boxes");
+let secretBoxes = null;
+let setupLength = selectedLength;
 
 function rebuildSecretBoxes(length) {
   setupLength = length;
@@ -624,31 +652,16 @@ function rebuildSecretBoxes(length) {
   secretBoxes.focusFirst();
 }
 
-function openSecretSetup(mode, lobbyInfo) {
-  secretSetupMode = mode;
-  const isLobby = mode === "lobby";
-  secretSetupDifficultyEl.classList.toggle("hidden", isLobby);
-  setupJoinInfo.classList.toggle("hidden", !isLobby);
-
-  if (isLobby) {
-    setupJoinInfo.textContent = `Jugarás contra ${lobbyInfo.opponentAvatar} ${lobbyInfo.opponentName}`;
-    secretSetupTitle.textContent = "Elige tu número secreto";
-    setupSubmitBtn.textContent = "Confirmar";
-    rebuildSecretBoxes(lobbyInfo.length);
-  } else {
-    secretSetupTitle.textContent = "Elige tu número secreto";
-    setupSubmitBtn.textContent = "Buscar partida";
-    refreshDifficultyButtons();
-    rebuildSecretBoxes(selectedLength);
-  }
-
+function openSecretSetup({ length, opponentName, opponentAvatar }) {
+  setupJoinInfo.textContent = `Jugarás contra ${opponentAvatar} ${opponentName}`;
+  secretSetupTitle.textContent = "Elige tu número secreto";
+  setupSubmitBtn.textContent = "Confirmar";
+  rebuildSecretBoxes(length);
   showScreen("secretSetup");
 }
 
 setupBackBtn.addEventListener("click", () => {
-  if (secretSetupMode === "lobby") {
-    socket.emit("cancel_lobby");
-  }
+  socket.emit("cancel_lobby");
   goHome();
 });
 
@@ -670,27 +683,11 @@ function submitSecretSetup() {
   setupError.textContent = "";
   resumeAudio();
   mySecret = secret;
-  myName = readLS("n1v1_name", "").trim() || "Jugador";
-  myAvatar = selectedAvatar;
-
-  if (secretSetupMode === "quickmatch") {
-    myToken = generateToken();
-    socket.emit("join_game", { name: myName, secret, avatar: myAvatar, length: setupLength, token: myToken });
-    waitingText.textContent = "Buscando rival...";
-    showScreen("waiting");
-  } else if (secretSetupMode === "lobby") {
-    secretBoxes.setDisabled(true);
-    setupSubmitBtn.classList.add("hidden");
-    setupLobbyStatus.classList.remove("hidden");
-    socket.emit("submit_lobby_secret", { secret });
-  }
+  secretBoxes.setDisabled(true);
+  setupSubmitBtn.classList.add("hidden");
+  setupLobbyStatus.classList.remove("hidden");
+  socket.emit("submit_lobby_secret", { secret });
 }
-
-socket.on("join_error", ({ message }) => {
-  setupError.textContent = message;
-  if (secretBoxes) setupSubmitBtn.disabled = !secretBoxes.isComplete();
-  showScreen("secretSetup");
-});
 
 socket.on("lobby_secret_error", ({ message }) => {
   setupError.textContent = message;
