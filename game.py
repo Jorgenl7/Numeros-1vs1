@@ -10,6 +10,12 @@ ALLOWED_LENGTHS = (3, 4, 5)
 TURN_SECONDS = 60
 RECONNECT_GRACE_SECONDS = 60
 CHAMPION_WINS = 3
+ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sin caracteres ambiguos (0/O, 1/I)
+ROOM_CODE_LENGTH = 5
+
+
+def generate_room_code() -> str:
+    return "".join(random.choice(ROOM_CODE_ALPHABET) for _ in range(ROOM_CODE_LENGTH))
 
 
 def is_valid_number(value: str, length: int) -> bool:
@@ -58,6 +64,8 @@ class GameManager:
         self.rooms: dict[str, Room] = {}
         self.sid_to_room: dict[str, str] = {}
         self.token_to_room: dict[str, str] = {}
+        self.pending_codes: dict[str, dict] = {}
+        self.sid_to_code: dict[str, str] = {}
 
     def join(self, sid: str, name: str, secret: str, length: int, avatar: str, token: str):
         """Añade al jugador a la cola de su dificultad o, si ya había alguien esperando
@@ -65,6 +73,7 @@ class GameManager:
 
         Devuelve una tupla (estado, room) donde estado es "waiting" o "matched".
         """
+        self.cancel_room_code(sid)
         pending = self.waiting.get(length)
         if pending is None:
             self.waiting[length] = {
@@ -201,6 +210,61 @@ class GameManager:
         room.last_result = None
         return "started", room
 
+    def create_room_code(self, sid: str, name: str, secret: str, length: int, avatar: str, token: str) -> str:
+        """Crea una sala privada pendiente de que un amigo se una con el código."""
+        self.cancel_waiting(sid)
+        self.cancel_room_code(sid)
+        code = generate_room_code()
+        while code in self.pending_codes:
+            code = generate_room_code()
+        self.pending_codes[code] = {
+            "sid": sid,
+            "name": name,
+            "secret": secret,
+            "avatar": avatar,
+            "length": length,
+            "token": token,
+        }
+        self.sid_to_code[sid] = code
+        return code
+
+    def peek_room_code(self, code: str) -> Optional[dict]:
+        return self.pending_codes.get(code)
+
+    def cancel_room_code(self, sid: str) -> Optional[str]:
+        code = self.sid_to_code.pop(sid, None)
+        if code:
+            self.pending_codes.pop(code, None)
+        return code
+
+    def join_room_code(self, code: str, sid: str, name: str, secret: str, avatar: str, token: str) -> Optional[Room]:
+        """Une a un jugador a la sala privada de `code`. Devuelve la Room creada, o None si no procede."""
+        pending = self.pending_codes.get(code)
+        if not pending or pending["sid"] == sid:
+            return None
+
+        del self.pending_codes[code]
+        self.sid_to_code.pop(pending["sid"], None)
+
+        room_id = uuid.uuid4().hex[:8]
+        p1 = Player(
+            sid=pending["sid"],
+            name=pending["name"],
+            secret=pending["secret"],
+            avatar=pending["avatar"],
+            token=pending["token"],
+        )
+        p2 = Player(sid=sid, name=name, secret=secret, avatar=avatar, token=token)
+        first_sid = random.choice([p1.sid, p2.sid])
+
+        room = Room(id=room_id, length=pending["length"], players={p1.sid: p1, p2.sid: p2}, turn_sid=first_sid)
+        self.rooms[room_id] = room
+        self.sid_to_room[p1.sid] = room_id
+        self.sid_to_room[p2.sid] = room_id
+        self.token_to_room[p1.token] = room_id
+        self.token_to_room[p2.token] = room_id
+        return room
+
     def remove_room(self, room_id: str) -> None:
         room = self.rooms.pop(room_id, None)
         if room:
@@ -212,6 +276,7 @@ class GameManager:
         """Gestiona la desconexión de un socket: sale de la cola, o marca su sala
         como pendiente de reconexión (no se borra al instante)."""
         self.cancel_waiting(sid)
+        self.cancel_room_code(sid)
         room = self.get_room(sid)
         if not room:
             return None

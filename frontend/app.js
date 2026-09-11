@@ -107,22 +107,13 @@ function createDigitBoxes(container, length) {
 
 /* ---------- Tema claro/oscuro ---------- */
 
-const themeBtn = document.getElementById("theme-btn");
 let theme = readLS("n1v1_theme", "dark");
 
 function applyTheme(t) {
   theme = t;
   document.documentElement.setAttribute("data-theme", t);
-  themeBtn.textContent = t === "light" ? "☀️" : "🌙";
-  themeBtn.title = t === "light" ? "Cambiar a tema oscuro" : "Cambiar a tema claro";
 }
 applyTheme(theme);
-
-themeBtn.addEventListener("click", () => {
-  const next = theme === "light" ? "dark" : "light";
-  applyTheme(next);
-  writeLS("n1v1_theme", next);
-});
 
 /* ---------- Sonido (generado con Web Audio, sin ficheros externos) ---------- */
 
@@ -187,18 +178,6 @@ const sounds = {
   chat: () => beep({ freq: 720, duration: 0.06, type: "sine", volume: 0.08 }),
 };
 
-const muteBtn = document.getElementById("mute-btn");
-function updateMuteBtn() {
-  muteBtn.textContent = muted ? "🔇" : "🔊";
-  muteBtn.title = muted ? "Activar sonido" : "Silenciar sonido";
-}
-updateMuteBtn();
-muteBtn.addEventListener("click", () => {
-  muted = !muted;
-  writeLS("numeros1vs1_muted", muted ? "1" : "0");
-  updateMuteBtn();
-});
-
 /* ---------- Confeti ---------- */
 
 function launchConfetti() {
@@ -247,8 +226,13 @@ function stopTurnTimer() {
 /* ---------- Pantallas ---------- */
 
 const screens = {
-  menu: document.getElementById("menu-screen"),
-  setup: document.getElementById("setup-screen"),
+  home: document.getElementById("home-screen"),
+  profile: document.getElementById("profile-screen"),
+  settings: document.getElementById("settings-screen"),
+  friends: document.getElementById("friends-screen"),
+  joinCode: document.getElementById("join-code-screen"),
+  roomCode: document.getElementById("room-code-screen"),
+  secretSetup: document.getElementById("secret-setup-screen"),
   waiting: document.getElementById("waiting-screen"),
   game: document.getElementById("game-screen"),
   gameover: document.getElementById("gameover-screen"),
@@ -313,12 +297,43 @@ function clearSession() {
   }
 }
 
-/* ---------- Pantalla de menú ---------- */
+/* ---------- Inicio ---------- */
+
+const homeProfileSummary = document.getElementById("home-profile-summary");
+const homeAvatarEl = document.getElementById("home-avatar");
+const homeNameEl = document.getElementById("home-name");
+const findMatchBtn = document.getElementById("find-match-btn");
+const playFriendsBtn = document.getElementById("play-friends-btn");
+const openProfileBtn = document.getElementById("open-profile-btn");
+const openSettingsBtn = document.getElementById("open-settings-btn");
+
+function refreshHomeSummary() {
+  homeAvatarEl.textContent = readLS("n1v1_avatar", AVATAR_OPTIONS[0]);
+  homeNameEl.textContent = readLS("n1v1_name", "").trim() || "Jugador";
+}
+
+function goHome() {
+  refreshHomeSummary();
+  showScreen("home");
+}
+
+findMatchBtn.addEventListener("click", () => openSecretSetup("quickmatch"));
+playFriendsBtn.addEventListener("click", () => showScreen("friends"));
+homeProfileSummary.addEventListener("click", openProfile);
+openProfileBtn.addEventListener("click", openProfile);
+openSettingsBtn.addEventListener("click", () => {
+  refreshSettingsDisplay();
+  showScreen("settings");
+});
+
+/* ---------- Perfil ---------- */
 
 const nameInput = document.getElementById("name-input");
-nameInput.value = readLS("n1v1_name", "");
-
 const avatarPicker = document.getElementById("avatar-picker");
+const statsSummary = document.getElementById("stats-summary");
+const profileSaveBtn = document.getElementById("profile-save-btn");
+const profileBackBtn = document.getElementById("profile-back-btn");
+
 let selectedAvatar = readLS("n1v1_avatar", AVATAR_OPTIONS[0]);
 
 AVATAR_OPTIONS.forEach((emoji) => {
@@ -335,32 +350,164 @@ AVATAR_OPTIONS.forEach((emoji) => {
   avatarPicker.appendChild(btn);
 });
 
-const difficultyPicker = document.getElementById("difficulty-picker");
-const difficultyButtons = Array.from(difficultyPicker.querySelectorAll(".difficulty-option"));
-let selectedLength = parseInt(readLS("n1v1_length", "4"), 10);
-if (![3, 4, 5].includes(selectedLength)) selectedLength = 4;
-
-function refreshDifficultyButtons() {
-  difficultyButtons.forEach((b) => {
-    b.classList.toggle("selected", parseInt(b.dataset.length, 10) === selectedLength);
-  });
+function openProfile() {
+  nameInput.value = readLS("n1v1_name", "");
+  refreshStatsSummary();
+  showScreen("profile");
 }
-refreshDifficultyButtons();
-difficultyButtons.forEach((b) => {
-  b.addEventListener("click", () => {
-    selectedLength = parseInt(b.dataset.length, 10);
-    writeLS("n1v1_length", String(selectedLength));
-    refreshDifficultyButtons();
+
+function saveProfileAndGoHome() {
+  writeLS("n1v1_name", nameInput.value.trim());
+  goHome();
+}
+
+profileSaveBtn.addEventListener("click", saveProfileAndGoHome);
+profileBackBtn.addEventListener("click", saveProfileAndGoHome);
+
+/* ---------- Ajustes ---------- */
+
+const themeToggleRow = document.getElementById("theme-toggle-row");
+const themeIcon = document.getElementById("theme-icon");
+const themeValue = document.getElementById("theme-value");
+const soundToggleRow = document.getElementById("sound-toggle-row");
+const soundIcon = document.getElementById("sound-icon");
+const soundValue = document.getElementById("sound-value");
+const settingsBackBtn = document.getElementById("settings-back-btn");
+
+function refreshSettingsDisplay() {
+  themeIcon.textContent = theme === "light" ? "☀️" : "🌙";
+  themeValue.textContent = theme === "light" ? "Claro" : "Oscuro";
+  soundIcon.textContent = muted ? "🔇" : "🔊";
+  soundValue.textContent = muted ? "Desactivado" : "Activado";
+}
+
+themeToggleRow.addEventListener("click", () => {
+  applyTheme(theme === "light" ? "dark" : "light");
+  writeLS("n1v1_theme", theme);
+  refreshSettingsDisplay();
+});
+
+soundToggleRow.addEventListener("click", () => {
+  muted = !muted;
+  writeLS("numeros1vs1_muted", muted ? "1" : "0");
+  refreshSettingsDisplay();
+});
+
+settingsBackBtn.addEventListener("click", goHome);
+
+/* ---------- Jugar con amigos ---------- */
+
+const createRoomBtn = document.getElementById("create-room-btn");
+const joinRoomBtn = document.getElementById("join-room-btn");
+const friendsBackBtn = document.getElementById("friends-back-btn");
+
+createRoomBtn.addEventListener("click", () => openSecretSetup("create"));
+joinRoomBtn.addEventListener("click", () => {
+  joinCodeInput.value = "";
+  joinCodeError.textContent = "";
+  showScreen("joinCode");
+  joinCodeInput.focus();
+});
+friendsBackBtn.addEventListener("click", goHome);
+
+/* ---------- Unirse con código ---------- */
+
+const joinCodeInput = document.getElementById("join-code-input");
+const joinCodeError = document.getElementById("join-code-error");
+const joinCodeCheckBtn = document.getElementById("join-code-check-btn");
+const joinCodeBackBtn = document.getElementById("join-code-back-btn");
+
+let pendingJoinCode = "";
+
+joinCodeInput.addEventListener("input", () => {
+  joinCodeInput.value = joinCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
+});
+joinCodeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") joinCodeCheckBtn.click();
+});
+
+joinCodeCheckBtn.addEventListener("click", () => {
+  const code = joinCodeInput.value.trim();
+  if (code.length !== 5) {
+    joinCodeError.textContent = "El código debe tener 5 caracteres.";
+    return;
+  }
+  joinCodeError.textContent = "";
+  socket.emit("check_room_code", { code });
+});
+
+joinCodeBackBtn.addEventListener("click", () => showScreen("friends"));
+
+socket.on("room_code_checked", (data) => {
+  if (!data.valid) {
+    joinCodeError.textContent = "Código no válido o la partida ya no está disponible.";
+    return;
+  }
+  joinCodeError.textContent = "";
+  pendingJoinCode = data.code;
+  openSecretSetup("join", {
+    length: data.length,
+    creatorName: data.creatorName,
+    creatorAvatar: data.creatorAvatar,
   });
 });
 
-const statsSummary = document.getElementById("stats-summary");
-refreshStatsSummary();
+/* ---------- Crear partida (código de sala) ---------- */
 
-const menuContinueBtn = document.getElementById("menu-continue-btn");
+const roomCodeDisplay = document.getElementById("room-code-display");
+const copyCodeBtn = document.getElementById("copy-code-btn");
+const copyLinkBtn = document.getElementById("copy-link-btn");
+const copyFeedback = document.getElementById("copy-feedback");
+const roomCodeCancelBtn = document.getElementById("room-code-cancel-btn");
 
-/* ---------- Pantalla de elección de secreto ---------- */
+let currentRoomCode = "";
+let copyFeedbackTimeout = null;
 
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch (e2) {
+      return;
+    }
+  }
+  copyFeedback.classList.remove("hidden");
+  clearTimeout(copyFeedbackTimeout);
+  copyFeedbackTimeout = setTimeout(() => copyFeedback.classList.add("hidden"), 2000);
+}
+
+copyCodeBtn.addEventListener("click", () => copyText(currentRoomCode));
+copyLinkBtn.addEventListener("click", () => {
+  const link = `${location.origin}${location.pathname}?room=${currentRoomCode}`;
+  copyText(link);
+});
+roomCodeCancelBtn.addEventListener("click", () => {
+  socket.emit("cancel_room_code");
+  goHome();
+});
+
+socket.on("room_created", ({ code }) => {
+  currentRoomCode = code;
+  roomCodeDisplay.textContent = code;
+  copyFeedback.classList.add("hidden");
+  showScreen("roomCode");
+});
+
+/* ---------- Pantalla de elección de secreto (compartida) ---------- */
+
+const secretSetupTitle = document.getElementById("secret-setup-title");
+const setupJoinInfo = document.getElementById("setup-join-info");
+const secretSetupDifficultyEl = document.getElementById("secret-setup-difficulty");
 const setupLengthHint = document.getElementById("setup-length-hint");
 const setupError = document.getElementById("setup-error");
 const setupSubmitBtn = document.getElementById("setup-submit-btn");
@@ -368,31 +515,85 @@ const setupBackBtn = document.getElementById("setup-back-btn");
 const secretBoxesEl = document.getElementById("secret-boxes");
 let secretBoxes = null;
 
-setupBackBtn.addEventListener("click", () => showScreen("menu"));
+const difficultyPicker = document.getElementById("difficulty-picker");
+const difficultyButtons = Array.from(difficultyPicker.querySelectorAll(".difficulty-option"));
+let selectedLength = parseInt(readLS("n1v1_length", "4"), 10);
+if (![3, 4, 5].includes(selectedLength)) selectedLength = 4;
+
+let secretSetupMode = "quickmatch";
+let secretSetupBackTarget = "home";
+let setupLength = selectedLength;
+
+function refreshDifficultyButtons() {
+  difficultyButtons.forEach((b) => {
+    b.classList.toggle("selected", parseInt(b.dataset.length, 10) === selectedLength);
+  });
+}
+refreshDifficultyButtons();
+
+difficultyButtons.forEach((b) => {
+  b.addEventListener("click", () => {
+    selectedLength = parseInt(b.dataset.length, 10);
+    writeLS("n1v1_length", String(selectedLength));
+    refreshDifficultyButtons();
+    if (secretSetupMode !== "join") {
+      rebuildSecretBoxes(selectedLength);
+    }
+  });
+});
+
+function rebuildSecretBoxes(length) {
+  setupLength = length;
+  secretBoxes = createDigitBoxes(secretBoxesEl, length);
+  setupLengthHint.textContent = `Tu número secreto (${length} cifras)`;
+  setupSubmitBtn.disabled = true;
+  setupError.textContent = "";
+  secretBoxes.focusFirst();
+}
+
+function openSecretSetup(mode, joinInfo) {
+  secretSetupMode = mode;
+  const isJoin = mode === "join";
+  secretSetupDifficultyEl.classList.toggle("hidden", isJoin);
+  setupJoinInfo.classList.toggle("hidden", !isJoin);
+
+  if (isJoin) {
+    setupJoinInfo.textContent = `Te unes a la partida de ${joinInfo.creatorAvatar} ${joinInfo.creatorName}`;
+    secretSetupTitle.textContent = "Elige tu número secreto";
+    setupSubmitBtn.textContent = "Unirme a la partida";
+    secretSetupBackTarget = "joinCode";
+    rebuildSecretBoxes(joinInfo.length);
+  } else if (mode === "create") {
+    secretSetupTitle.textContent = "Crea tu partida";
+    setupSubmitBtn.textContent = "Crear partida";
+    secretSetupBackTarget = "friends";
+    refreshDifficultyButtons();
+    rebuildSecretBoxes(selectedLength);
+  } else {
+    secretSetupTitle.textContent = "Elige tu número secreto";
+    setupSubmitBtn.textContent = "Buscar partida";
+    secretSetupBackTarget = "home";
+    refreshDifficultyButtons();
+    rebuildSecretBoxes(selectedLength);
+  }
+
+  showScreen("secretSetup");
+}
+
+setupBackBtn.addEventListener("click", () => showScreen(secretSetupBackTarget));
 
 secretBoxesEl.addEventListener("digitschange", () => {
   if (secretBoxes) setupSubmitBtn.disabled = !secretBoxes.isComplete();
 });
 secretBoxesEl.addEventListener("digitsenter", () => {
-  if (secretBoxes && !setupSubmitBtn.disabled) submitSetup();
+  if (secretBoxes && !setupSubmitBtn.disabled) submitSecretSetup();
 });
+setupSubmitBtn.addEventListener("click", submitSecretSetup);
 
-menuContinueBtn.addEventListener("click", () => {
-  writeLS("n1v1_name", nameInput.value.trim());
-  secretBoxes = createDigitBoxes(secretBoxesEl, selectedLength);
-  setupLengthHint.textContent = `Tu número secreto (${selectedLength} cifras)`;
-  setupSubmitBtn.disabled = true;
-  setupError.textContent = "";
-  showScreen("setup");
-  secretBoxes.focusFirst();
-});
-
-setupSubmitBtn.addEventListener("click", submitSetup);
-
-function submitSetup() {
+function submitSecretSetup() {
   const secret = secretBoxes.getValue();
-  if (!isValidLength(secret, selectedLength)) {
-    setupError.textContent = `Introduce un número de exactamente ${selectedLength} cifras.`;
+  if (!isValidLength(secret, setupLength)) {
+    setupError.textContent = `Introduce un número de exactamente ${setupLength} cifras.`;
     secretBoxes.shake();
     return;
   }
@@ -400,27 +601,38 @@ function submitSetup() {
   resumeAudio();
   myToken = generateToken();
   mySecret = secret;
-  myName = nameInput.value.trim();
+  myName = readLS("n1v1_name", "").trim() || "Jugador";
   myAvatar = selectedAvatar;
-  currentLength = selectedLength;
-  socket.emit("join_game", {
-    name: myName,
-    secret,
-    avatar: myAvatar,
-    length: selectedLength,
-    token: myToken,
-  });
-  waitingText.textContent = "Buscando rival...";
-  showScreen("waiting");
+
+  if (secretSetupMode === "quickmatch") {
+    socket.emit("join_game", { name: myName, secret, avatar: myAvatar, length: setupLength, token: myToken });
+    waitingText.textContent = "Buscando rival...";
+    showScreen("waiting");
+  } else if (secretSetupMode === "create") {
+    socket.emit("create_room", { name: myName, secret, avatar: myAvatar, length: setupLength, token: myToken });
+    waitingText.textContent = "Creando partida...";
+    showScreen("waiting");
+  } else if (secretSetupMode === "join") {
+    socket.emit("join_room", { code: pendingJoinCode, name: myName, secret, avatar: myAvatar, token: myToken });
+    waitingText.textContent = "Uniéndote a la partida...";
+    showScreen("waiting");
+  }
 }
 
 socket.on("join_error", ({ message }) => {
   setupError.textContent = message;
   if (secretBoxes) setupSubmitBtn.disabled = !secretBoxes.isComplete();
-  showScreen("setup");
+  showScreen("secretSetup");
+});
+
+socket.on("join_room_error", ({ message }) => {
+  setupError.textContent = message;
+  if (secretBoxes) setupSubmitBtn.disabled = !secretBoxes.isComplete();
+  showScreen("secretSetup");
 });
 
 socket.on("waiting_for_opponent", () => {
+  waitingText.textContent = "Buscando rival...";
   showScreen("waiting");
 });
 
@@ -616,7 +828,7 @@ socket.on("game_over", (payload) => handleGameOver(payload));
 
 newOpponentBtn.addEventListener("click", () => {
   clearSession();
-  location.reload();
+  goHome();
 });
 
 surrenderBtn.addEventListener("click", () => {
@@ -747,10 +959,16 @@ socket.on("rejoined", (data) => {
 
 socket.on("rejoin_failed", () => {
   clearSession();
-  showScreen("menu");
+  goHome();
 });
 
 /* ---------- Arranque ---------- */
+
+function getRoomCodeFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get("room");
+  return code ? code.toUpperCase().slice(0, 5) : null;
+}
 
 (function boot() {
   let session = null;
@@ -769,7 +987,18 @@ socket.on("rejoin_failed", () => {
     waitingText.textContent = "Reconectando con tu partida...";
     showScreen("waiting");
     socket.emit("rejoin", { token: myToken });
-  } else {
-    showScreen("menu");
+    return;
   }
+
+  const urlCode = getRoomCodeFromUrl();
+  if (urlCode) {
+    history.replaceState({}, "", location.pathname);
+    joinCodeInput.value = urlCode;
+    joinCodeError.textContent = "";
+    showScreen("joinCode");
+    socket.emit("check_room_code", { code: urlCode });
+    return;
+  }
+
+  goHome();
 })();

@@ -47,6 +47,14 @@ def sanitize_avatar(raw) -> str:
     return avatar[:8] if avatar else "🙂"
 
 
+def sanitize_length(raw) -> int:
+    try:
+        length = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_LENGTH
+    return length if length in ALLOWED_LENGTHS else DEFAULT_LENGTH
+
+
 async def start_room(room):
     """Emite match_found a ambos jugadores y arranca el temporizador de turno."""
     for player_sid, player in room.players.items():
@@ -127,13 +135,7 @@ async def join_game(sid, data):
     avatar = sanitize_avatar(data.get("avatar"))
     token = str(data.get("token") or "").strip()
     secret = str(data.get("secret") or "").strip()
-
-    try:
-        length = int(data.get("length", DEFAULT_LENGTH))
-    except (TypeError, ValueError):
-        length = DEFAULT_LENGTH
-    if length not in ALLOWED_LENGTHS:
-        length = DEFAULT_LENGTH
+    length = sanitize_length(data.get("length"))
 
     if not token:
         await sio.emit("join_error", {"message": "Falta identificador de sesión. Recarga la página."}, to=sid)
@@ -151,6 +153,93 @@ async def join_game(sid, data):
 
     if status == "waiting":
         await sio.emit("waiting_for_opponent", {}, to=sid)
+        return
+
+    await start_room(room)
+
+
+@sio.event
+async def create_room(sid, data):
+    data = data or {}
+    name = sanitize_name(data.get("name"))
+    avatar = sanitize_avatar(data.get("avatar"))
+    token = str(data.get("token") or "").strip()
+    secret = str(data.get("secret") or "").strip()
+    length = sanitize_length(data.get("length"))
+
+    if not token:
+        await sio.emit("join_error", {"message": "Falta identificador de sesión. Recarga la página."}, to=sid)
+        return
+
+    if not is_valid_number(secret, length):
+        await sio.emit(
+            "join_error",
+            {"message": f"El número secreto debe tener exactamente {length} cifras (0-9)."},
+            to=sid,
+        )
+        return
+
+    code = games.create_room_code(sid, name, secret, length, avatar, token)
+    await sio.emit("room_created", {"code": code, "length": length}, to=sid)
+
+
+@sio.event
+async def cancel_room_code(sid, data=None):
+    games.cancel_room_code(sid)
+
+
+@sio.event
+async def check_room_code(sid, data):
+    data = data or {}
+    code = str(data.get("code") or "").strip().upper()
+    pending = games.peek_room_code(code)
+
+    if not pending:
+        await sio.emit("room_code_checked", {"valid": False}, to=sid)
+        return
+
+    await sio.emit(
+        "room_code_checked",
+        {
+            "valid": True,
+            "code": code,
+            "length": pending["length"],
+            "creatorName": pending["name"],
+            "creatorAvatar": pending["avatar"],
+        },
+        to=sid,
+    )
+
+
+@sio.event
+async def join_room(sid, data):
+    data = data or {}
+    code = str(data.get("code") or "").strip().upper()
+    name = sanitize_name(data.get("name"))
+    avatar = sanitize_avatar(data.get("avatar"))
+    token = str(data.get("token") or "").strip()
+    secret = str(data.get("secret") or "").strip()
+
+    pending = games.peek_room_code(code)
+    if not pending:
+        await sio.emit("join_room_error", {"message": "Ese código ya no está disponible."}, to=sid)
+        return
+
+    if not token:
+        await sio.emit("join_room_error", {"message": "Falta identificador de sesión. Recarga la página."}, to=sid)
+        return
+
+    if not is_valid_number(secret, pending["length"]):
+        await sio.emit(
+            "join_room_error",
+            {"message": f"El número secreto debe tener exactamente {pending['length']} cifras (0-9)."},
+            to=sid,
+        )
+        return
+
+    room = games.join_room_code(code, sid, name, secret, avatar, token)
+    if room is None:
+        await sio.emit("join_room_error", {"message": "No puedes unirte a tu propia partida."}, to=sid)
         return
 
     await start_room(room)

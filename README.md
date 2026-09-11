@@ -20,12 +20,21 @@ número secreto de 4 cifras del rival. Backend en **FastAPI + Socket.IO**
 
 ## Funciones
 
-- **Menú inicial**: nombre, avatar (emoji), dificultad (3/4/5 cifras) y aviso
-  de turno, todo recordado en el navegador para la próxima vez.
+- **Pantalla de inicio** con dos acciones principales — "Buscar Rival"
+  (emparejamiento aleatorio) y "Jugar con Amigos" (código o enlace) — y
+  accesos a Perfil y Ajustes.
+- **Perfil persistente**: nombre y avatar (emoji) se eligen una vez y se
+  recuerdan para todas las partidas; se pueden cambiar cuando quieras desde
+  "Perfil".
+- **Jugar con amigos**: crea una partida privada y comparte el código de 5
+  caracteres o el enlace directo (`?room=CÓDIGO`) con quien quieras que
+  juegue contigo; al abrir el enlace se entra directamente a introducir el
+  número secreto, sin pasar por el emparejamiento aleatorio.
+- **Ajustes**: tema claro/oscuro y sonido, en una pantalla dedicada.
 - **Marcador persistente** durante la sesión, con pantalla especial de
   "campeón" al llegar a 3 victorias.
 - **Estadísticas de por vida** (victorias/derrotas totales en este
-  navegador), visibles en el menú.
+  navegador), visibles en el Perfil.
 - **Revancha instantánea**: al terminar una partida, ambos pulsan "Jugar otra
   vez" y eligen un nuevo número sin volver a emparejarse. Empieza quien
   perdió la ronda anterior.
@@ -35,10 +44,8 @@ número secreto de 4 cifras del rival. Backend en **FastAPI + Socket.IO**
   partida en curso (mismo rival, mismos intentos) en vez de perderla. Tu
   rival ve un aviso de "esperando a que vuelva" durante 60 segundos.
 - **Chat** en la propia partida.
-- **Tema claro/oscuro** conmutable desde el icono 🌙/☀️.
 - **Temporizador por turno**, sonidos y confeti al ganar (todo generado en el
-  propio navegador, sin ficheros de audio externos). El icono 🔊/🔇 silencia
-  el sonido.
+  propio navegador, sin ficheros de audio externos).
 
 ## Estructura del proyecto
 
@@ -63,12 +70,20 @@ de victoria hasta que la partida termina.
 
 ## Cómo funciona el emparejamiento
 
-Al pulsar "Buscar partida", el jugador entra en una cola de espera en memoria
-del servidor. En cuanto hay dos jugadores esperando, se crea una sala y
-empieza la partida (el primer turno se decide al azar). Esto significa que
-para probarlo tú solo puedes abrir **dos pestañas** del navegador: la primera
-quedará "buscando rival" y, al abrir la segunda y enviar su número secreto,
-ambas se emparejarán automáticamente.
+**Buscar Rival**: al elegir dificultad y número secreto, el jugador entra en
+una cola de espera en memoria del servidor (una por cada dificultad). En
+cuanto hay dos jugadores esperando con la misma dificultad, se crea una sala
+y empieza la partida (el primer turno se decide al azar).
+
+**Jugar con Amigos**: "Crear partida" genera un código de 5 caracteres (y un
+enlace `?room=CÓDIGO`) y deja al creador esperando. "Unirme con código"
+comprueba el código, muestra quién ha creado la partida y a cuántas cifras,
+y al enviar el número secreto empareja inmediatamente con esa sala concreta
+(sin pasar por la cola aleatoria).
+
+Para probarlo tú solo puedes abrir **dos pestañas** del navegador con la
+misma URL y completar el flujo (perfil + Buscar Rival, o Crear partida +
+Unirme con código) en cada una.
 
 ## Requisitos
 
@@ -154,13 +169,13 @@ evitar conflictos al hacer push.)
   podrían caer en instancias distintas y nunca emparejarse. Usa siempre
   **1 instancia** (es lo que hacen por defecto los planes gratuitos de
   Render/Railway).
-- El emparejamiento agrupa a los jugadores por dificultad elegida (3/4/5
-  cifras): solo se empareja a quienes buscan partida con el mismo número de
-  cifras.
-- No hay salas privadas por código: el emparejamiento es automático (el
-  primero que llega espera, el segundo se empareja con él). Es la forma más
-  sencilla de jugar 1 vs 1 con quien quieras: compartid la misma URL y
-  entrad casi a la vez.
+- El emparejamiento de "Buscar Rival" agrupa a los jugadores por dificultad
+  elegida (3/4/5 cifras): solo se empareja a quienes buscan partida con el
+  mismo número de cifras.
+- Los códigos de sala de "Jugar con Amigos" viven en memoria del servidor:
+  si recargas la página mientras esperas a que se una un amigo, el código se
+  pierde y hay que crear uno nuevo (no aplica una vez la partida ha
+  empezado, ahí sí funciona la reconexión normal).
 - Las estadísticas, preferencias y la reconexión se guardan en el navegador
   (localStorage/sessionStorage) de cada jugador, no en una cuenta: si cambias
   de navegador o dispositivo, empiezan de cero. Si abres dos pestañas del
