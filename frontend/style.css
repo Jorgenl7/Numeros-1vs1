@@ -1,14 +1,14 @@
 :root {
-  --bg: #0b1120;
-  --bg-glow: radial-gradient(circle at 50% -10%, #1e3a5f33, transparent 60%);
-  --card: #141c2e;
-  --card-border: #26324a;
-  --input-bg: #0b1120;
-  --text: #e7ecf7;
-  --muted: #8b96ad;
-  --accent: #38bdf8;
-  --accent-strong: #22d3ee;
-  --accent-dark: #0284c7;
+  --bg: #0a120f;
+  --bg-glow: radial-gradient(circle at 50% -10%, #14532d40, transparent 60%);
+  --card: #121e18;
+  --card-border: #24392f;
+  --input-bg: #0a120f;
+  --text: #e6f1ea;
+  --muted: #8ca79a;
+  --accent: #34d399;
+  --accent-strong: #6ee7b7;
+  --accent-dark: #059669;
   --success: #22c55e;
   --danger: #f87171;
   --warning: #fbbf24;
@@ -16,16 +16,16 @@
 }
 
 :root[data-theme="light"] {
-  --bg: #eef2f8;
-  --bg-glow: radial-gradient(circle at 50% -10%, #bfe3fa88, transparent 60%);
+  --bg: #eef7f2;
+  --bg-glow: radial-gradient(circle at 50% -10%, #bbf7d088, transparent 60%);
   --card: #ffffff;
-  --card-border: #e0e6f0;
-  --input-bg: #f4f7fb;
-  --text: #101828;
-  --muted: #64748b;
-  --accent: #0284c7;
-  --accent-strong: #0ea5e9;
-  --accent-dark: #0369a1;
+  --card-border: #dbebe1;
+  --input-bg: #f1f8f4;
+  --text: #0f1f17;
+  --muted: #5f7869;
+  --accent: #059669;
+  --accent-strong: #10b981;
+  --accent-dark: #047857;
   --success: #16a34a;
   --danger: #dc2626;
   --warning: #d97706;
@@ -186,7 +186,7 @@ header h1 span {
 
 .avatar-option.selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
 }
 
 /* Selector de dificultad */
@@ -232,7 +232,7 @@ header h1 span {
 
 .difficulty-option.selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
 }
 
 .difficulty-option.selected .difficulty-number {
@@ -630,8 +630,8 @@ header h1 span {
 
 .chat-messages li.own {
   align-self: flex-end;
-  background: rgba(56, 189, 248, 0.15);
-  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
 }
 
 .chat-messages .chat-author {
