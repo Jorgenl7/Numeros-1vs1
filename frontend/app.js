@@ -1,16 +1,40 @@
 const socket = io();
 
-function isFourDigits(value) {
-  return /^\d{4}$/.test(value);
+const AVATAR_OPTIONS = ["🙂", "😎", "🦊", "🐼", "🚀", "🔥", "🎯", "🐙", "🍀", "🦄"];
+
+function isValidLength(value, length) {
+  return new RegExp(`^\\d{${length}}$`).test(value);
+}
+
+function generateToken() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "t-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function readLS(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function writeLS(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    /* localStorage no disponible */
+  }
 }
 
 /* ---------- Cajas de dígitos reutilizables ---------- */
 
-function createDigitBoxes(container) {
+function createDigitBoxes(container, length) {
   container.innerHTML = "";
   const inputs = [];
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < length; i++) {
     const input = document.createElement("input");
     input.type = "text";
     input.inputMode = "numeric";
@@ -81,6 +105,25 @@ function createDigitBoxes(container) {
   };
 }
 
+/* ---------- Tema claro/oscuro ---------- */
+
+const themeBtn = document.getElementById("theme-btn");
+let theme = readLS("n1v1_theme", "dark");
+
+function applyTheme(t) {
+  theme = t;
+  document.documentElement.setAttribute("data-theme", t);
+  themeBtn.textContent = t === "light" ? "☀️" : "🌙";
+  themeBtn.title = t === "light" ? "Cambiar a tema oscuro" : "Cambiar a tema claro";
+}
+applyTheme(theme);
+
+themeBtn.addEventListener("click", () => {
+  const next = theme === "light" ? "dark" : "light";
+  applyTheme(next);
+  writeLS("n1v1_theme", next);
+});
+
 /* ---------- Sonido (generado con Web Audio, sin ficheros externos) ---------- */
 
 let audioCtx = null;
@@ -100,12 +143,7 @@ function resumeAudio() {
   }
 }
 
-let muted = false;
-try {
-  muted = localStorage.getItem("numeros1vs1_muted") === "1";
-} catch (e) {
-  /* localStorage no disponible */
-}
+let muted = readLS("numeros1vs1_muted", "0") === "1";
 
 function beep({ freq = 440, duration = 0.15, type = "sine", volume = 0.2, delay = 0 } = {}) {
   if (muted) return;
@@ -146,6 +184,7 @@ const sounds = {
     beep({ freq: 294, duration: 0.4, type: "sawtooth", volume: 0.15, delay: 0.2 });
   },
   timeout: () => beep({ freq: 220, duration: 0.25, type: "sawtooth", volume: 0.15 }),
+  chat: () => beep({ freq: 720, duration: 0.06, type: "sine", volume: 0.08 }),
 };
 
 const muteBtn = document.getElementById("mute-btn");
@@ -156,12 +195,41 @@ function updateMuteBtn() {
 updateMuteBtn();
 muteBtn.addEventListener("click", () => {
   muted = !muted;
-  try {
-    localStorage.setItem("numeros1vs1_muted", muted ? "1" : "0");
-  } catch (e) {
-    /* localStorage no disponible */
-  }
+  writeLS("numeros1vs1_muted", muted ? "1" : "0");
   updateMuteBtn();
+});
+
+/* ---------- Aviso de turno fuera de la pestaña ---------- */
+
+const originalTitle = document.title;
+let titleBlinkInterval = null;
+
+function stopTitleBlink() {
+  clearInterval(titleBlinkInterval);
+  titleBlinkInterval = null;
+  document.title = originalTitle;
+}
+
+function announceYourTurn() {
+  if (!document.hidden) return;
+  clearInterval(titleBlinkInterval);
+  let flip = false;
+  titleBlinkInterval = setInterval(() => {
+    document.title = flip ? originalTitle : "🔴 ¡Tu turno! · " + originalTitle;
+    flip = !flip;
+  }, 1000);
+
+  if (notifyEnabled && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification("¡Es tu turno!", { body: "Te toca adivinar en Adivina el Número." });
+    } catch (e) {
+      /* noop */
+    }
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) stopTitleBlink();
 });
 
 /* ---------- Confeti ---------- */
@@ -212,6 +280,7 @@ function stopTurnTimer() {
 /* ---------- Pantallas ---------- */
 
 const screens = {
+  menu: document.getElementById("menu-screen"),
   setup: document.getElementById("setup-screen"),
   waiting: document.getElementById("waiting-screen"),
   game: document.getElementById("game-screen"),
@@ -228,38 +297,170 @@ function updateScoreLabel(you, opponent) {
   scoreLabel.textContent = `${you} – ${opponent}`;
 }
 
-/* ---------- Pantalla de configuración ---------- */
+/* ---------- Estadísticas persistentes ---------- */
 
-const setupForm = document.getElementById("setup-form");
+function readStats() {
+  try {
+    return JSON.parse(localStorage.getItem("n1v1_stats") || "null") || { wins: 0, losses: 0 };
+  } catch (e) {
+    return { wins: 0, losses: 0 };
+  }
+}
+
+function writeStats(stats) {
+  try {
+    localStorage.setItem("n1v1_stats", JSON.stringify(stats));
+  } catch (e) {
+    /* localStorage no disponible */
+  }
+}
+
+function refreshStatsSummary() {
+  const stats = readStats();
+  if (stats.wins + stats.losses === 0) {
+    statsSummary.classList.add("hidden");
+    return;
+  }
+  statsSummary.textContent = `Tus estadísticas: ${stats.wins} victorias · ${stats.losses} derrotas`;
+  statsSummary.classList.remove("hidden");
+}
+
+/* ---------- Sesión (para reconectar tras recargar) ---------- */
+
+function saveSession() {
+  try {
+    sessionStorage.setItem(
+      "n1v1_session",
+      JSON.stringify({ token: myToken, secret: mySecret, name: myName, avatar: myAvatar, length: currentLength })
+    );
+  } catch (e) {
+    /* sessionStorage no disponible */
+  }
+}
+
+function clearSession() {
+  try {
+    sessionStorage.removeItem("n1v1_session");
+  } catch (e) {
+    /* sessionStorage no disponible */
+  }
+}
+
+/* ---------- Pantalla de menú ---------- */
+
 const nameInput = document.getElementById("name-input");
-const setupError = document.getElementById("setup-error");
-const setupSubmitBtn = setupForm.querySelector("button[type=submit]");
-const secretBoxesEl = document.getElementById("secret-boxes");
-const secretBoxes = createDigitBoxes(secretBoxesEl);
+nameInput.value = readLS("n1v1_name", "");
 
-setupSubmitBtn.disabled = true;
-secretBoxesEl.addEventListener("digitschange", () => {
-  setupSubmitBtn.disabled = !secretBoxes.isComplete();
+const avatarPicker = document.getElementById("avatar-picker");
+let selectedAvatar = readLS("n1v1_avatar", AVATAR_OPTIONS[0]);
+
+AVATAR_OPTIONS.forEach((emoji) => {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "avatar-option" + (emoji === selectedAvatar ? " selected" : "");
+  btn.textContent = emoji;
+  btn.addEventListener("click", () => {
+    selectedAvatar = emoji;
+    avatarPicker.querySelectorAll(".avatar-option").forEach((b) => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    writeLS("n1v1_avatar", emoji);
+  });
+  avatarPicker.appendChild(btn);
 });
 
-setupForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  resumeAudio();
+const difficultyPicker = document.getElementById("difficulty-picker");
+const difficultyButtons = Array.from(difficultyPicker.querySelectorAll(".difficulty-option"));
+let selectedLength = parseInt(readLS("n1v1_length", "4"), 10);
+if (![3, 4, 5].includes(selectedLength)) selectedLength = 4;
+
+function refreshDifficultyButtons() {
+  difficultyButtons.forEach((b) => {
+    b.classList.toggle("selected", parseInt(b.dataset.length, 10) === selectedLength);
+  });
+}
+refreshDifficultyButtons();
+difficultyButtons.forEach((b) => {
+  b.addEventListener("click", () => {
+    selectedLength = parseInt(b.dataset.length, 10);
+    writeLS("n1v1_length", String(selectedLength));
+    refreshDifficultyButtons();
+  });
+});
+
+const notifyToggle = document.getElementById("notify-toggle");
+let notifyEnabled = readLS("n1v1_notify", "0") === "1";
+notifyToggle.checked = notifyEnabled;
+notifyToggle.addEventListener("change", () => {
+  notifyEnabled = notifyToggle.checked;
+  writeLS("n1v1_notify", notifyEnabled ? "1" : "0");
+  if (notifyEnabled && "Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+});
+
+const statsSummary = document.getElementById("stats-summary");
+refreshStatsSummary();
+
+const menuContinueBtn = document.getElementById("menu-continue-btn");
+
+/* ---------- Pantalla de elección de secreto ---------- */
+
+const setupLengthHint = document.getElementById("setup-length-hint");
+const setupError = document.getElementById("setup-error");
+const setupSubmitBtn = document.getElementById("setup-submit-btn");
+const setupBackBtn = document.getElementById("setup-back-btn");
+const secretBoxesEl = document.getElementById("secret-boxes");
+let secretBoxes = null;
+
+setupBackBtn.addEventListener("click", () => showScreen("menu"));
+
+secretBoxesEl.addEventListener("digitschange", () => {
+  if (secretBoxes) setupSubmitBtn.disabled = !secretBoxes.isComplete();
+});
+secretBoxesEl.addEventListener("digitsenter", () => {
+  if (secretBoxes && !setupSubmitBtn.disabled) submitSetup();
+});
+
+menuContinueBtn.addEventListener("click", () => {
+  writeLS("n1v1_name", nameInput.value.trim());
+  secretBoxes = createDigitBoxes(secretBoxesEl, selectedLength);
+  setupLengthHint.textContent = `Tu número secreto (${selectedLength} cifras)`;
+  setupSubmitBtn.disabled = true;
+  setupError.textContent = "";
+  showScreen("setup");
+  secretBoxes.focusFirst();
+});
+
+setupSubmitBtn.addEventListener("click", submitSetup);
+
+function submitSetup() {
   const secret = secretBoxes.getValue();
-  if (!isFourDigits(secret)) {
-    setupError.textContent = "Introduce un número de exactamente 4 cifras.";
+  if (!isValidLength(secret, selectedLength)) {
+    setupError.textContent = `Introduce un número de exactamente ${selectedLength} cifras.`;
     secretBoxes.shake();
     return;
   }
   setupError.textContent = "";
+  resumeAudio();
+  myToken = generateToken();
   mySecret = secret;
-  socket.emit("join_game", { name: nameInput.value.trim(), secret });
+  myName = nameInput.value.trim();
+  myAvatar = selectedAvatar;
+  currentLength = selectedLength;
+  socket.emit("join_game", {
+    name: myName,
+    secret,
+    avatar: myAvatar,
+    length: selectedLength,
+    token: myToken,
+  });
+  waitingText.textContent = "Buscando rival...";
   showScreen("waiting");
-});
+}
 
 socket.on("join_error", ({ message }) => {
   setupError.textContent = message;
-  setupSubmitBtn.disabled = !secretBoxes.isComplete();
+  if (secretBoxes) setupSubmitBtn.disabled = !secretBoxes.isComplete();
   showScreen("setup");
 });
 
@@ -269,19 +470,38 @@ socket.on("waiting_for_opponent", () => {
 
 /* ---------- Pantalla de partida ---------- */
 
+const waitingText = document.getElementById("waiting-text");
 const opponentLabel = document.getElementById("opponent-label");
 const scoreLabel = document.getElementById("score-label");
 const mySecretLabel = document.getElementById("my-secret-label");
-let mySecret = "";
+const reconnectBanner = document.getElementById("reconnect-banner");
 const turnIndicator = document.getElementById("turn-indicator");
 const guessBoxesEl = document.getElementById("guess-boxes");
-const guessBoxes = createDigitBoxes(guessBoxesEl);
 const guessBtn = document.getElementById("guess-btn");
 const guessError = document.getElementById("guess-error");
 const myAttemptsList = document.getElementById("my-attempts");
 const opponentAttemptsList = document.getElementById("opponent-attempts");
 
+let myToken = "";
+let mySecret = "";
+let myName = "";
+let myAvatar = "";
+let currentLength = 4;
 let isMyTurn = false;
+let guessBoxes = null;
+let rematchBoxes = null;
+
+function appendAttempt(list, { guess, hits, timeout }) {
+  const li = document.createElement("li");
+  if (timeout) {
+    li.innerHTML = `<span class="timeout">⏱️ Tiempo agotado</span>`;
+  } else {
+    const hitsClass = hits === currentLength ? "hits hits-high" : "hits";
+    li.innerHTML = `<span class="guess">${guess}</span><span class="${hitsClass}">${hits} acierto${hits === 1 ? "" : "s"}</span>`;
+  }
+  list.appendChild(li);
+  list.scrollTop = list.scrollHeight;
+}
 
 function setTurn(yourTurn, turnSeconds) {
   isMyTurn = yourTurn;
@@ -293,6 +513,9 @@ function setTurn(yourTurn, turnSeconds) {
   if (yourTurn) {
     guessBoxes.focusFirst();
     sounds.yourTurn();
+    announceYourTurn();
+  } else {
+    stopTitleBlink();
   }
   startTurnTimer(turnSeconds);
 }
@@ -309,8 +532,8 @@ guessBtn.addEventListener("click", submitGuess);
 
 function submitGuess() {
   const guess = guessBoxes.getValue();
-  if (!isFourDigits(guess)) {
-    guessError.textContent = "El intento debe tener 4 cifras.";
+  if (!isValidLength(guess, currentLength)) {
+    guessError.textContent = `El intento debe tener ${currentLength} cifras.`;
     guessBoxes.shake();
     return;
   }
@@ -322,13 +545,23 @@ function submitGuess() {
   guessBtn.disabled = true;
 }
 
-socket.on("match_found", ({ opponentName, yourTurn, turnSeconds, scoreYou, scoreOpponent }) => {
-  opponentLabel.textContent = `Rival: ${opponentName}`;
-  mySecretLabel.textContent = `Tu número secreto: ${mySecret}`;
-  updateScoreLabel(scoreYou, scoreOpponent);
+function resetMatchUI() {
   myAttemptsList.innerHTML = "";
   opponentAttemptsList.innerHTML = "";
+  chatMessagesEl.innerHTML = "";
   guessError.textContent = "";
+  reconnectBanner.classList.add("hidden");
+  mySecretLabel.textContent = mySecret;
+}
+
+socket.on("match_found", ({ opponentName, opponentAvatar, length, yourTurn, turnSeconds, scoreYou, scoreOpponent }) => {
+  currentLength = length;
+  guessBoxes = createDigitBoxes(guessBoxesEl, currentLength);
+  rematchBoxes = createDigitBoxes(rematchBoxesEl, currentLength);
+  opponentLabel.textContent = `${opponentAvatar} ${opponentName}`;
+  updateScoreLabel(scoreYou, scoreOpponent);
+  resetMatchUI();
+  saveSession();
   sounds.match();
   setTurn(yourTurn, turnSeconds);
   showScreen("game");
@@ -342,23 +575,44 @@ socket.on("guess_error", ({ message }) => {
 
 socket.on("guess_result", ({ by, guess, hits, yourTurn, turnSeconds }) => {
   const list = by === socket.id ? myAttemptsList : opponentAttemptsList;
-  const li = document.createElement("li");
-  const hitsClass = hits === 4 ? "hits hits-high" : "hits";
-  li.innerHTML = `<span class="guess">${guess}</span><span class="${hitsClass}">${hits} acierto${hits === 1 ? "" : "s"}</span>`;
-  list.appendChild(li);
-  list.scrollTop = list.scrollHeight;
+  appendAttempt(list, { guess, hits });
   sounds.hit(hits);
   setTurn(yourTurn, turnSeconds);
 });
 
 socket.on("turn_timeout", ({ by, yourTurn, turnSeconds }) => {
   const list = by === socket.id ? myAttemptsList : opponentAttemptsList;
-  const li = document.createElement("li");
-  li.innerHTML = `<span class="timeout">⏱️ Tiempo agotado</span>`;
-  list.appendChild(li);
-  list.scrollTop = list.scrollHeight;
+  appendAttempt(list, { timeout: true });
   sounds.timeout();
   setTurn(yourTurn, turnSeconds);
+});
+
+/* ---------- Chat ---------- */
+
+const chatMessagesEl = document.getElementById("chat-messages");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+
+chatForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = chatInput.value.trim();
+  if (!text) return;
+  socket.emit("send_chat", { text });
+  chatInput.value = "";
+});
+
+socket.on("chat_message", ({ by, name, avatar, text }) => {
+  const li = document.createElement("li");
+  const isOwn = by === socket.id;
+  li.className = isOwn ? "own" : "";
+  const author = isOwn ? "Tú" : `${avatar} ${name}`;
+  const safeText = document.createElement("span");
+  safeText.textContent = text;
+  li.innerHTML = `<span class="chat-author">${author}</span>`;
+  li.appendChild(safeText);
+  chatMessagesEl.appendChild(li);
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  if (!isOwn) sounds.chat();
 });
 
 /* ---------- Pantalla de fin de partida ---------- */
@@ -370,28 +624,48 @@ const rematchBtn = document.getElementById("rematch-btn");
 const newOpponentBtn = document.getElementById("new-opponent-btn");
 const surrenderBtn = document.getElementById("surrender-btn");
 
-socket.on("game_over", ({ won, yourSecret, opponentSecret, scoreYou, scoreOpponent, reason }) => {
+function handleGameOver(payload, opts = {}) {
+  const { won, yourSecret, opponentSecret, scoreYou, scoreOpponent, reason, champion } = payload;
   stopTurnTimer();
+  stopTitleBlink();
   updateScoreLabel(scoreYou, scoreOpponent);
 
-  if (reason === "surrender") {
+  gameoverTitle.classList.remove("champion-glow");
+  if (champion) {
+    gameoverTitle.textContent = won ? "🏆 ¡Eres el campeón de la sesión!" : "🏆 Tu rival es el campeón de la sesión";
+    if (won) gameoverTitle.classList.add("champion-glow");
+  } else if (reason === "surrender") {
     gameoverTitle.textContent = won ? "🏳️ Tu rival se ha rendido" : "🏳️ Te has rendido";
   } else {
     gameoverTitle.textContent = won ? "🎉 ¡Has ganado!" : "😔 Has perdido";
   }
+
   gameoverDetail.textContent = `Tu número era ${yourSecret}. El número del rival era ${opponentSecret}.`;
-  gameoverScore.textContent = `Marcador: ${scoreYou} – ${scoreOpponent}`;
+  gameoverScore.textContent = `${champion ? "Marcador final" : "Marcador"}: ${scoreYou} – ${scoreOpponent}`;
 
-  if (won) {
-    sounds.win();
-    launchConfetti();
-  } else {
-    sounds.lose();
+  if (!opts.isRejoin) {
+    const stats = readStats();
+    if (won) stats.wins += 1;
+    else stats.losses += 1;
+    writeStats(stats);
+
+    if (won) {
+      sounds.win();
+      launchConfetti();
+    } else {
+      sounds.lose();
+    }
   }
-  showScreen("gameover");
-});
 
-newOpponentBtn.addEventListener("click", () => location.reload());
+  showScreen("gameover");
+}
+
+socket.on("game_over", (payload) => handleGameOver(payload));
+
+newOpponentBtn.addEventListener("click", () => {
+  clearSession();
+  location.reload();
+});
 
 surrenderBtn.addEventListener("click", () => {
   const confirmed = window.confirm("¿Seguro que quieres rendirte? Tu rival ganará la partida.");
@@ -403,12 +677,10 @@ surrenderBtn.addEventListener("click", () => {
 /* ---------- Revancha ---------- */
 
 const rematchBoxesEl = document.getElementById("rematch-boxes");
-const rematchBoxes = createDigitBoxes(rematchBoxesEl);
 const rematchError = document.getElementById("rematch-error");
 const rematchConfirmBtn = document.getElementById("rematch-confirm-btn");
 const rematchStatus = document.getElementById("rematch-status");
 
-rematchConfirmBtn.disabled = true;
 rematchBoxesEl.addEventListener("digitschange", () => {
   rematchConfirmBtn.disabled = !rematchBoxes.isComplete();
 });
@@ -430,14 +702,15 @@ rematchBtn.addEventListener("click", () => {
 
 function confirmRematch() {
   const secret = rematchBoxes.getValue();
-  if (!isFourDigits(secret)) {
-    rematchError.textContent = "Introduce un número de exactamente 4 cifras.";
+  if (!isValidLength(secret, currentLength)) {
+    rematchError.textContent = `Introduce un número de exactamente ${currentLength} cifras.`;
     rematchBoxes.shake();
     return;
   }
   rematchError.textContent = "";
   resumeAudio();
   mySecret = secret;
+  saveSession();
   socket.emit("request_rematch", { secret });
   rematchBoxes.setDisabled(true);
   rematchConfirmBtn.classList.add("hidden");
@@ -457,22 +730,95 @@ socket.on("rematch_waiting", () => {
 });
 
 socket.on("rematch_started", ({ yourTurn, turnSeconds, scoreYou, scoreOpponent }) => {
-  myAttemptsList.innerHTML = "";
-  opponentAttemptsList.innerHTML = "";
-  guessError.textContent = "";
-  mySecretLabel.textContent = `Tu número secreto: ${mySecret}`;
+  resetMatchUI();
   updateScoreLabel(scoreYou, scoreOpponent);
+  saveSession();
   sounds.match();
   setTurn(yourTurn, turnSeconds);
   showScreen("game");
 });
 
-/* ---------- Desconexión del rival ---------- */
+/* ---------- Desconexión y reconexión ---------- */
+
+let reconnectCountdownInterval = null;
+
+socket.on("opponent_disconnected", ({ graceSeconds }) => {
+  let remaining = graceSeconds;
+  clearInterval(reconnectCountdownInterval);
+  reconnectBanner.classList.remove("hidden");
+  reconnectBanner.textContent = `Tu rival se ha desconectado. Esperando a que vuelva... (${remaining}s)`;
+  reconnectCountdownInterval = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearInterval(reconnectCountdownInterval);
+      return;
+    }
+    reconnectBanner.textContent = `Tu rival se ha desconectado. Esperando a que vuelva... (${remaining}s)`;
+  }, 1000);
+});
+
+socket.on("opponent_reconnected", () => {
+  clearInterval(reconnectCountdownInterval);
+  reconnectBanner.classList.add("hidden");
+});
 
 socket.on("opponent_left", () => {
+  clearInterval(reconnectCountdownInterval);
+  clearSession();
   stopTurnTimer();
+  stopTitleBlink();
+  gameoverTitle.classList.remove("champion-glow");
   gameoverTitle.textContent = "Tu rival se ha desconectado";
   gameoverDetail.textContent = "La partida ha finalizado.";
   gameoverScore.textContent = "";
   showScreen("gameover");
 });
+
+socket.on("rejoined", (data) => {
+  const { opponentName, opponentAvatar, length, scoreYou, scoreOpponent, myAttempts, opponentAttempts, state } = data;
+  currentLength = length;
+  guessBoxes = createDigitBoxes(guessBoxesEl, currentLength);
+  rematchBoxes = createDigitBoxes(rematchBoxesEl, currentLength);
+  opponentLabel.textContent = `${opponentAvatar} ${opponentName}`;
+  resetMatchUI();
+  (myAttempts || []).forEach((a) => appendAttempt(myAttemptsList, a));
+  (opponentAttempts || []).forEach((a) => appendAttempt(opponentAttemptsList, a));
+  updateScoreLabel(scoreYou, scoreOpponent);
+  saveSession();
+
+  if (state === "finished") {
+    handleGameOver(data, { isRejoin: true });
+  } else {
+    setTurn(data.yourTurn, data.turnSeconds);
+    showScreen("game");
+  }
+});
+
+socket.on("rejoin_failed", () => {
+  clearSession();
+  showScreen("menu");
+});
+
+/* ---------- Arranque ---------- */
+
+(function boot() {
+  let session = null;
+  try {
+    session = JSON.parse(sessionStorage.getItem("n1v1_session") || "null");
+  } catch (e) {
+    session = null;
+  }
+
+  if (session && session.token) {
+    myToken = session.token;
+    mySecret = session.secret;
+    myName = session.name;
+    myAvatar = session.avatar;
+    currentLength = session.length || 4;
+    waitingText.textContent = "Reconectando con tu partida...";
+    showScreen("waiting");
+    socket.emit("rejoin", { token: myToken });
+  } else {
+    showScreen("menu");
+  }
+})();

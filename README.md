@@ -6,28 +6,42 @@ número secreto de 4 cifras del rival. Backend en **FastAPI + Socket.IO**
 
 ## Reglas
 
-1. Cada jugador elige un número secreto de 4 cifras (se permiten repetidos y
-   ceros a la izquierda, p. ej. `0032`).
-2. Se juega por turnos. En su turno, un jugador introduce un intento de 4
-   cifras. Tiene 60 segundos para hacerlo; si se le acaba el tiempo, el turno
-   pasa automáticamente al rival.
+1. Cada jugador elige un número secreto (3, 4 o 5 cifras, a elegir en el
+   menú; se permiten repetidos y ceros a la izquierda, p. ej. `0032`).
+2. Se juega por turnos. En su turno, un jugador introduce un intento con el
+   mismo número de cifras. Tiene 60 segundos para hacerlo; si se le acaba el
+   tiempo, el turno pasa automáticamente al rival.
 3. El servidor compara el intento contra el número secreto del rival y
    devuelve **solo la cantidad de aciertos exactos** (mismo dígito en la
    misma posición). Nunca revela qué dígitos ni en qué posición son correctos.
-4. Gana quien primero consiga 4 aciertos (o si el rival se rinde).
+4. Gana quien primero acierte todas las cifras (o si el rival se rinde).
+   El primero en ganar **3 partidas** se corona campeón de la sesión y el
+   marcador vuelve a 0-0.
 
-## Funciones extra
+## Funciones
 
-- **Marcador persistente**: se lleva la cuenta de partidas ganadas por cada
-  jugador mientras dure la sesión.
-- **Revancha instantánea**: al terminar una partida, ambos pueden pulsar
-  "Jugar otra vez" y elegir un nuevo número sin salir de la sala ni volver a
-  emparejarse. Empieza quien perdió la ronda anterior.
+- **Menú inicial**: nombre, avatar (emoji), dificultad (3/4/5 cifras) y aviso
+  de turno, todo recordado en el navegador para la próxima vez.
+- **Marcador persistente** durante la sesión, con pantalla especial de
+  "campeón" al llegar a 3 victorias.
+- **Estadísticas de por vida** (victorias/derrotas totales en este
+  navegador), visibles en el menú.
+- **Revancha instantánea**: al terminar una partida, ambos pulsan "Jugar otra
+  vez" y eligen un nuevo número sin volver a emparejarse. Empieza quien
+  perdió la ronda anterior.
 - **Rendirse**: cualquiera puede rendirse durante la partida; el rival gana
   automáticamente.
+- **Reconexión**: si recargas la página a mitad de partida, recuperas tu
+  partida en curso (mismo rival, mismos intentos) en vez de perderla. Tu
+  rival ve un aviso de "esperando a que vuelva" durante 60 segundos.
+- **Chat** en la propia partida.
+- **Aviso de turno fuera de la pestaña**: si activas la casilla del menú, el
+  título de la pestaña parpadea (y, si das permiso al navegador, salta una
+  notificación) en cuanto te toca jugar mientras tienes otra pestaña abierta.
+- **Tema claro/oscuro** conmutable desde el icono 🌙/☀️.
 - **Temporizador por turno**, sonidos y confeti al ganar (todo generado en el
-  propio navegador, sin ficheros de audio externos). El icono 🔊/🔇 de la
-  esquina superior silencia el sonido.
+  propio navegador, sin ficheros de audio externos). El icono 🔊/🔇 silencia
+  el sonido.
 
 ## Estructura del proyecto
 
@@ -143,10 +157,17 @@ evitar conflictos al hacer push.)
   podrían caer en instancias distintas y nunca emparejarse. Usa siempre
   **1 instancia** (es lo que hacen por defecto los planes gratuitos de
   Render/Railway).
-- Si un jugador recarga la página a mitad de partida, se le asigna una nueva
-  conexión y la partida se da por finalizada para el rival (mensaje "tu rival
-  se ha desconectado").
+- El emparejamiento agrupa a los jugadores por dificultad elegida (3/4/5
+  cifras): solo se empareja a quienes buscan partida con el mismo número de
+  cifras.
 - No hay salas privadas por código: el emparejamiento es automático (el
   primero que llega espera, el segundo se empareja con él). Es la forma más
   sencilla de jugar 1 vs 1 con quien quieras: compartid la misma URL y
   entrad casi a la vez.
+- Las estadísticas, preferencias y la reconexión se guardan en el navegador
+  (localStorage/sessionStorage) de cada jugador, no en una cuenta: si cambias
+  de navegador o dispositivo, empiezan de cero. Si abres dos pestañas del
+  juego en el mismo navegador para probarlo tú solo, las estadísticas
+  globales de "victorias/derrotas" se mezclarán entre ambas pestañas (es solo
+  un efecto de probarlo así; entre dos personas en dispositivos distintos no
+  ocurre).

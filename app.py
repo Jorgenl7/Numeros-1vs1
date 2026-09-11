@@ -8,7 +8,14 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from game import TURN_SECONDS, GameManager, is_valid_number
+from game import (
+    ALLOWED_LENGTHS,
+    DEFAULT_LENGTH,
+    RECONNECT_GRACE_SECONDS,
+    TURN_SECONDS,
+    GameManager,
+    is_valid_number,
+)
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
@@ -31,6 +38,35 @@ def score_payload(player, opponent):
     return {"scoreYou": player.wins, "scoreOpponent": opponent.wins}
 
 
+def sanitize_name(raw) -> str:
+    return str(raw or "").strip()[:20] or "Jugador"
+
+
+def sanitize_avatar(raw) -> str:
+    avatar = str(raw or "").strip()
+    return avatar[:8] if avatar else "🙂"
+
+
+async def start_room(room):
+    """Emite match_found a ambos jugadores y arranca el temporizador de turno."""
+    for player_sid, player in room.players.items():
+        opponent = room.players[room.opponent_sid(player_sid)]
+        await sio.enter_room(player_sid, room.id)
+        await sio.emit(
+            "match_found",
+            {
+                "yourTurn": room.turn_sid == player_sid,
+                "opponentName": opponent.name,
+                "opponentAvatar": opponent.avatar,
+                "length": room.length,
+                "turnSeconds": TURN_SECONDS,
+                **score_payload(player, opponent),
+            },
+            to=player_sid,
+        )
+    sio.start_background_task(schedule_turn_timeout, room.id, room.turn_token)
+
+
 async def schedule_turn_timeout(room_id: str, turn_token: int):
     await asyncio.sleep(TURN_SECONDS)
 
@@ -41,8 +77,6 @@ async def schedule_turn_timeout(room_id: str, turn_token: int):
     room = result["room"]
     timed_out_sid = result["timed_out_sid"]
     new_turn_sid = room.turn_sid
-    timed_out_player = room.players[timed_out_sid]
-    other_player = room.players[new_turn_sid]
 
     await sio.emit(
         "turn_timeout",
@@ -57,6 +91,18 @@ async def schedule_turn_timeout(room_id: str, turn_token: int):
     sio.start_background_task(schedule_turn_timeout, room.id, room.turn_token)
 
 
+async def schedule_disconnect_grace(room_id: str, sid: str):
+    await asyncio.sleep(RECONNECT_GRACE_SECONDS)
+
+    room = games.finalize_disconnect(room_id, sid)
+    if room is None:
+        return
+
+    opponent_sid = next((s for s in room.players if s != sid), None)
+    if opponent_sid:
+        await sio.emit("opponent_left", {}, to=opponent_sid)
+
+
 @sio.event
 async def connect(sid, environ):
     print(f"Cliente conectado: {sid}")
@@ -64,54 +110,104 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
-    room = games.leave(sid)
-    if room:
-        opponent_sid = next((s for s in room.players if s != sid), None)
-        if opponent_sid:
-            await sio.emit("opponent_left", {}, to=opponent_sid)
+    room = games.disconnect(sid)
+    if room is None:
+        return
+
+    opponent_sid = next((s for s in room.players if s != sid), None)
+    if opponent_sid:
+        await sio.emit("opponent_disconnected", {"graceSeconds": RECONNECT_GRACE_SECONDS}, to=opponent_sid)
+    sio.start_background_task(schedule_disconnect_grace, room.id, sid)
 
 
 @sio.event
 async def join_game(sid, data):
     data = data or {}
-    name = str(data.get("name") or "").strip()[:20] or "Jugador"
+    name = sanitize_name(data.get("name"))
+    avatar = sanitize_avatar(data.get("avatar"))
+    token = str(data.get("token") or "").strip()
     secret = str(data.get("secret") or "").strip()
 
-    if not is_valid_number(secret):
-        await sio.emit("join_error", {"message": "El número secreto debe tener exactamente 4 cifras (0-9)."}, to=sid)
+    try:
+        length = int(data.get("length", DEFAULT_LENGTH))
+    except (TypeError, ValueError):
+        length = DEFAULT_LENGTH
+    if length not in ALLOWED_LENGTHS:
+        length = DEFAULT_LENGTH
+
+    if not token:
+        await sio.emit("join_error", {"message": "Falta identificador de sesión. Recarga la página."}, to=sid)
         return
 
-    status, room = games.join(sid, name, secret)
+    if not is_valid_number(secret, length):
+        await sio.emit(
+            "join_error",
+            {"message": f"El número secreto debe tener exactamente {length} cifras (0-9)."},
+            to=sid,
+        )
+        return
+
+    status, room = games.join(sid, name, secret, length, avatar, token)
 
     if status == "waiting":
         await sio.emit("waiting_for_opponent", {}, to=sid)
         return
 
-    for player_sid, player in room.players.items():
-        opponent = room.players[room.opponent_sid(player_sid)]
-        sio.enter_room(player_sid, room.id)
-        await sio.emit(
-            "match_found",
-            {
-                "room": room.id,
-                "yourTurn": room.turn_sid == player_sid,
-                "opponentName": opponent.name,
-                "turnSeconds": TURN_SECONDS,
-                **score_payload(player, opponent),
-            },
-            to=player_sid,
-        )
+    await start_room(room)
 
-    sio.start_background_task(schedule_turn_timeout, room.id, room.turn_token)
+
+@sio.event
+async def rejoin(sid, data):
+    data = data or {}
+    token = str(data.get("token") or "").strip()
+    if not token:
+        await sio.emit("rejoin_failed", {}, to=sid)
+        return
+
+    room = games.rejoin(token, sid)
+    if room is None:
+        await sio.emit("rejoin_failed", {}, to=sid)
+        return
+
+    await sio.enter_room(sid, room.id)
+    player = room.players[sid]
+    opponent = room.players[room.opponent_sid(sid)]
+
+    payload = {
+        "opponentName": opponent.name,
+        "opponentAvatar": opponent.avatar,
+        "length": room.length,
+        "myAttempts": player.attempts,
+        "opponentAttempts": opponent.attempts,
+        **score_payload(player, opponent),
+    }
+
+    if room.finished:
+        payload["state"] = "finished"
+        last_result = room.last_result or {}
+        secrets = last_result.get("secrets_by_token", {})
+        payload["won"] = last_result.get("winner_token") == player.token
+        payload["yourSecret"] = secrets.get(player.token, player.secret)
+        payload["opponentSecret"] = secrets.get(opponent.token, opponent.secret)
+        payload["reason"] = last_result.get("reason", "win")
+    else:
+        payload["state"] = "playing"
+        payload["yourTurn"] = room.turn_sid == sid
+        payload["turnSeconds"] = TURN_SECONDS
+
+    await sio.emit("rejoined", payload, to=sid)
+    await sio.emit("opponent_reconnected", {}, to=opponent.sid)
 
 
 @sio.event
 async def make_guess(sid, data):
     data = data or {}
+    room = games.get_room(sid)
+    length = room.length if room else DEFAULT_LENGTH
     guess = str(data.get("guess") or "").strip()
 
-    if not is_valid_number(guess):
-        await sio.emit("guess_error", {"message": "El intento debe tener exactamente 4 cifras (0-9)."}, to=sid)
+    if not is_valid_number(guess, length):
+        await sio.emit("guess_error", {"message": f"El intento debe tener exactamente {length} cifras (0-9)."}, to=sid)
         return
 
     result = games.make_guess(sid, guess)
@@ -124,6 +220,7 @@ async def make_guess(sid, data):
     opponent = result["opponent"]
     hits = result["hits"]
     won = result["won"]
+    champion = result["champion"]
 
     await sio.emit(
         "guess_result",
@@ -137,16 +234,25 @@ async def make_guess(sid, data):
     )
 
     if won:
-        await sio.emit(
-            "game_over",
-            {"won": True, "yourSecret": guesser.secret, "opponentSecret": opponent.secret, **score_payload(guesser, opponent)},
-            to=guesser.sid,
-        )
-        await sio.emit(
-            "game_over",
-            {"won": False, "yourSecret": opponent.secret, "opponentSecret": guesser.secret, **score_payload(opponent, guesser)},
-            to=opponent.sid,
-        )
+        payload_guesser = {
+            "won": True,
+            "yourSecret": guesser.secret,
+            "opponentSecret": opponent.secret,
+            "champion": champion,
+            **score_payload(guesser, opponent),
+        }
+        payload_opponent = {
+            "won": False,
+            "yourSecret": opponent.secret,
+            "opponentSecret": guesser.secret,
+            "champion": champion,
+            **score_payload(opponent, guesser),
+        }
+        if champion:
+            guesser.wins = 0
+            opponent.wins = 0
+        await sio.emit("game_over", payload_guesser, to=guesser.sid)
+        await sio.emit("game_over", payload_opponent, to=opponent.sid)
     else:
         sio.start_background_task(schedule_turn_timeout, room.id, room.turn_token)
 
@@ -159,38 +265,44 @@ async def surrender(sid, data=None):
 
     quitter = result["quitter"]
     winner = result["winner"]
+    champion = result["champion"]
 
-    await sio.emit(
-        "game_over",
-        {
-            "won": False,
-            "yourSecret": quitter.secret,
-            "opponentSecret": winner.secret,
-            "reason": "surrender",
-            **score_payload(quitter, winner),
-        },
-        to=quitter.sid,
-    )
-    await sio.emit(
-        "game_over",
-        {
-            "won": True,
-            "yourSecret": winner.secret,
-            "opponentSecret": quitter.secret,
-            "reason": "surrender",
-            **score_payload(winner, quitter),
-        },
-        to=winner.sid,
-    )
+    payload_quitter = {
+        "won": False,
+        "yourSecret": quitter.secret,
+        "opponentSecret": winner.secret,
+        "reason": "surrender",
+        "champion": champion,
+        **score_payload(quitter, winner),
+    }
+    payload_winner = {
+        "won": True,
+        "yourSecret": winner.secret,
+        "opponentSecret": quitter.secret,
+        "reason": "surrender",
+        "champion": champion,
+        **score_payload(winner, quitter),
+    }
+    if champion:
+        quitter.wins = 0
+        winner.wins = 0
+    await sio.emit("game_over", payload_quitter, to=quitter.sid)
+    await sio.emit("game_over", payload_winner, to=winner.sid)
 
 
 @sio.event
 async def request_rematch(sid, data):
     data = data or {}
+    room = games.get_room(sid)
+    length = room.length if room else DEFAULT_LENGTH
     secret = str(data.get("secret") or "").strip()
 
-    if not is_valid_number(secret):
-        await sio.emit("rematch_error", {"message": "El número secreto debe tener exactamente 4 cifras (0-9)."}, to=sid)
+    if not is_valid_number(secret, length):
+        await sio.emit(
+            "rematch_error",
+            {"message": f"El número secreto debe tener exactamente {length} cifras (0-9)."},
+            to=sid,
+        )
         return
 
     result = games.submit_rematch_secret(sid, secret)
@@ -217,6 +329,28 @@ async def request_rematch(sid, data):
         )
 
     sio.start_background_task(schedule_turn_timeout, room.id, room.turn_token)
+
+
+@sio.event
+async def send_chat(sid, data):
+    data = data or {}
+    text = str(data.get("text") or "").strip()[:200]
+    if not text:
+        return
+
+    room = games.get_room(sid)
+    if not room:
+        return
+
+    sender = room.players.get(sid)
+    if not sender:
+        return
+
+    await sio.emit(
+        "chat_message",
+        {"by": sid, "name": sender.name, "avatar": sender.avatar, "text": text},
+        to=room.id,
+    )
 
 
 if __name__ == "__main__":

@@ -13,28 +13,52 @@
   <div class="app">
     <header>
       <h1>🔢 Adivina el Número <span>1 vs 1</span></h1>
-      <button id="mute-btn" class="icon-btn" type="button" title="Silenciar sonido" aria-label="Silenciar sonido">🔊</button>
+      <div class="header-actions">
+        <button id="theme-btn" class="icon-btn" type="button" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
+        <button id="mute-btn" class="icon-btn" type="button" title="Silenciar sonido" aria-label="Silenciar sonido">🔊</button>
+      </div>
     </header>
 
-    <section id="setup-screen" class="screen">
-      <form id="setup-form">
-        <label class="field-label">
-          Tu nombre
-          <input type="text" id="name-input" maxlength="20" placeholder="Jugador" autocomplete="off" />
-        </label>
-        <label class="field-label">Tu número secreto (4 cifras)</label>
-        <div id="secret-boxes" class="digit-boxes"></div>
-        <p class="error" id="setup-error"></p>
-        <button type="submit" class="primary-btn">Buscar partida</button>
-      </form>
+    <section id="menu-screen" class="screen">
+      <label class="field-label">Tu nombre</label>
+      <input type="text" id="name-input" maxlength="20" placeholder="Jugador" autocomplete="off" />
+
+      <label class="field-label">Elige tu avatar</label>
+      <div id="avatar-picker" class="avatar-picker"></div>
+
+      <label class="field-label">Dificultad (cifras del número secreto)</label>
+      <div id="difficulty-picker" class="difficulty-picker">
+        <button type="button" class="difficulty-option" data-length="3">3 cifras</button>
+        <button type="button" class="difficulty-option" data-length="4">4 cifras</button>
+        <button type="button" class="difficulty-option" data-length="5">5 cifras</button>
+      </div>
+
+      <label class="toggle-row">
+        <input type="checkbox" id="notify-toggle" />
+        <span>🔔 Avisarme cuando sea mi turno (aunque cambie de pestaña)</span>
+      </label>
+
+      <p id="stats-summary" class="muted hidden"></p>
+
+      <button type="button" id="menu-continue-btn" class="primary-btn">Continuar</button>
+    </section>
+
+    <section id="setup-screen" class="screen hidden">
+      <p class="muted" id="setup-length-hint">Tu número secreto (4 cifras)</p>
+      <div id="secret-boxes" class="digit-boxes"></div>
+      <p class="error" id="setup-error"></p>
+      <button type="button" id="setup-submit-btn" class="primary-btn" disabled>Buscar partida</button>
+      <button type="button" id="setup-back-btn" class="link-btn">← Cambiar ajustes</button>
     </section>
 
     <section id="waiting-screen" class="screen hidden">
       <div class="spinner"></div>
-      <p>Buscando rival...</p>
+      <p id="waiting-text">Buscando rival...</p>
     </section>
 
     <section id="game-screen" class="screen hidden">
+      <p id="reconnect-banner" class="reconnect-banner hidden"></p>
+
       <div class="status-bar">
         <div class="status-left">
           <span id="opponent-label">Rival: —</span>
@@ -43,7 +67,10 @@
         <span id="turn-indicator" class="badge">—</span>
       </div>
 
-      <p id="my-secret-label" class="my-secret">Tu número secreto: ----</p>
+      <div class="my-secret-box">
+        <span class="my-secret-caption">Tu número secreto</span>
+        <span id="my-secret-label" class="my-secret-value">----</span>
+      </div>
 
       <div class="timer-track">
         <div id="timer-fill" class="timer-fill"></div>
@@ -64,6 +91,15 @@
           <h2>Intentos del rival</h2>
           <ul id="opponent-attempts" class="attempts-list"></ul>
         </div>
+      </div>
+
+      <div class="chat-box">
+        <h2>💬 Chat</h2>
+        <ul id="chat-messages" class="chat-messages"></ul>
+        <form id="chat-form" class="chat-form">
+          <input type="text" id="chat-input" maxlength="200" placeholder="Escribe un mensaje..." autocomplete="off" />
+          <button type="submit" class="chat-send-btn">Enviar</button>
+        </form>
       </div>
 
       <button type="button" id="surrender-btn" class="link-btn">🏳️ Rendirse</button>
