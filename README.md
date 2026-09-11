@@ -9,11 +9,25 @@ número secreto de 4 cifras del rival. Backend en **FastAPI + Socket.IO**
 1. Cada jugador elige un número secreto de 4 cifras (se permiten repetidos y
    ceros a la izquierda, p. ej. `0032`).
 2. Se juega por turnos. En su turno, un jugador introduce un intento de 4
-   cifras.
+   cifras. Tiene 60 segundos para hacerlo; si se le acaba el tiempo, el turno
+   pasa automáticamente al rival.
 3. El servidor compara el intento contra el número secreto del rival y
    devuelve **solo la cantidad de aciertos exactos** (mismo dígito en la
    misma posición). Nunca revela qué dígitos ni en qué posición son correctos.
-4. Gana quien primero consiga 4 aciertos.
+4. Gana quien primero consiga 4 aciertos (o si el rival se rinde).
+
+## Funciones extra
+
+- **Marcador persistente**: se lleva la cuenta de partidas ganadas por cada
+  jugador mientras dure la sesión.
+- **Revancha instantánea**: al terminar una partida, ambos pueden pulsar
+  "Jugar otra vez" y elegir un nuevo número sin salir de la sala ni volver a
+  emparejarse. Empieza quien perdió la ronda anterior.
+- **Rendirse**: cualquiera puede rendirse durante la partida; el rival gana
+  automáticamente.
+- **Temporizador por turno**, sonidos y confeti al ganar (todo generado en el
+  propio navegador, sin ficheros de audio externos). El icono 🔊/🔇 de la
+  esquina superior silencia el sonido.
 
 ## Estructura del proyecto
 

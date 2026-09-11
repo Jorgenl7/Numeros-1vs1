@@ -4,26 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Adivina el Número · 1vs1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <div class="app">
     <header>
       <h1>🔢 Adivina el Número <span>1 vs 1</span></h1>
+      <button id="mute-btn" class="icon-btn" type="button" title="Silenciar sonido" aria-label="Silenciar sonido">🔊</button>
     </header>
 
     <section id="setup-screen" class="screen">
       <form id="setup-form">
-        <label>
+        <label class="field-label">
           Tu nombre
           <input type="text" id="name-input" maxlength="20" placeholder="Jugador" autocomplete="off" />
         </label>
-        <label>
-          Tu número secreto (4 cifras)
-          <input type="text" id="secret-input" inputmode="numeric" maxlength="4" placeholder="Ej: 4271" autocomplete="off" required />
-        </label>
+        <label class="field-label">Tu número secreto (4 cifras)</label>
+        <div id="secret-boxes" class="digit-boxes"></div>
         <p class="error" id="setup-error"></p>
-        <button type="submit">Buscar partida</button>
+        <button type="submit" class="primary-btn">Buscar partida</button>
       </form>
     </section>
 
@@ -34,14 +36,21 @@
 
     <section id="game-screen" class="screen hidden">
       <div class="status-bar">
-        <span id="opponent-label">Rival: —</span>
+        <div class="status-left">
+          <span id="opponent-label">Rival: —</span>
+          <span id="score-label" class="score">0 – 0</span>
+        </div>
         <span id="turn-indicator" class="badge">—</span>
       </div>
 
-      <form id="guess-form">
-        <input type="text" id="guess-input" inputmode="numeric" maxlength="4" placeholder="0000" disabled autocomplete="off" />
-        <button type="submit" id="guess-btn" disabled>Adivinar</button>
-      </form>
+      <div class="timer-track">
+        <div id="timer-fill" class="timer-fill"></div>
+      </div>
+
+      <div id="guess-boxes" class="digit-boxes"></div>
+      <div class="guess-actions">
+        <button type="button" id="guess-btn" class="primary-btn" disabled>Adivinar</button>
+      </div>
       <p class="error" id="guess-error"></p>
 
       <div class="boards">
@@ -54,12 +63,27 @@
           <ul id="opponent-attempts" class="attempts-list"></ul>
         </div>
       </div>
+
+      <button type="button" id="surrender-btn" class="link-btn">🏳️ Rendirse</button>
     </section>
 
     <section id="gameover-screen" class="screen hidden">
       <h2 id="gameover-title">—</h2>
       <p id="gameover-detail"></p>
-      <button id="play-again-btn">Jugar de nuevo</button>
+      <p id="gameover-score" class="score-final"></p>
+      <div class="gameover-actions">
+        <button id="rematch-btn" class="primary-btn">🔁 Jugar otra vez</button>
+        <button id="new-opponent-btn" class="link-btn" type="button">Buscar otro rival</button>
+      </div>
+    </section>
+
+    <section id="rematch-screen" class="screen hidden">
+      <h2>Revancha</h2>
+      <p>Elige tu nuevo número secreto</p>
+      <div id="rematch-boxes" class="digit-boxes"></div>
+      <p class="error" id="rematch-error"></p>
+      <button type="button" id="rematch-confirm-btn" class="primary-btn">Confirmar</button>
+      <p id="rematch-status" class="muted hidden">Esperando a que tu rival elija su número...</p>
     </section>
   </div>
 
