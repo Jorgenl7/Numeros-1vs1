@@ -1,0 +1,240 @@
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-dark: #0284c7;
+  --success: #22c55e;
+  --danger: #f87171;
+  --border: #334155;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.app {
+  width: 100%;
+  max-width: 640px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+header h1 {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+header h1 span {
+  color: var(--accent);
+  font-weight: 400;
+}
+
+.screen {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+}
+
+.screen.hidden {
+  display: none;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input[type="text"] {
+  background: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+input[type="text"]:disabled {
+  opacity: 0.5;
+}
+
+button {
+  background: var(--accent);
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+
+button:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--danger);
+  min-height: 1.2em;
+  font-size: 0.9rem;
+  margin: 4px 0 12px;
+}
+
+#waiting-screen {
+  text-align: center;
+}
+
+.spinner {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 16px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+.badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: var(--border);
+}
+
+.badge-your-turn {
+  background: var(--success);
+  color: #08290f;
+}
+
+.badge-opponent-turn {
+  background: var(--border);
+  color: var(--muted);
+}
+
+#guess-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+#guess-form input {
+  flex: 1;
+  text-align: center;
+}
+
+.boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.board h2 {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.attempts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.attempts-list li {
+  display: flex;
+  justify-content: space-between;
+  background: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+}
+
+.attempts-list .guess {
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+
+.attempts-list .hits {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#gameover-screen {
+  text-align: center;
+}
+
+#gameover-screen h2 {
+  margin-top: 0;
+}
+
+#gameover-detail {
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+@media (max-width: 480px) {
+  .screen {
+    padding: 20px;
+  }
+
+  .boards {
+    grid-template-columns: 1fr;
+  }
+}

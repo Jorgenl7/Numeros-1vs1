@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: numeros-1vs1
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:socket_app --host 0.0.0.0 --port $PORT

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adivina el Número · 1vs1</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🔢 Adivina el Número <span>1 vs 1</span></h1>
+    </header>
+
+    <section id="setup-screen" class="screen">
+      <form id="setup-form">
+        <label>
+          Tu nombre
+          <input type="text" id="name-input" maxlength="20" placeholder="Jugador" autocomplete="off" />
+        </label>
+        <label>
+          Tu número secreto (4 cifras)
+          <input type="text" id="secret-input" inputmode="numeric" maxlength="4" placeholder="Ej: 4271" autocomplete="off" required />
+        </label>
+        <p class="error" id="setup-error"></p>
+        <button type="submit">Buscar partida</button>
+      </form>
+    </section>
+
+    <section id="waiting-screen" class="screen hidden">
+      <div class="spinner"></div>
+      <p>Buscando rival...</p>
+    </section>
+
+    <section id="game-screen" class="screen hidden">
+      <div class="status-bar">
+        <span id="opponent-label">Rival: —</span>
+        <span id="turn-indicator" class="badge">—</span>
+      </div>
+
+      <form id="guess-form">
+        <input type="text" id="guess-input" inputmode="numeric" maxlength="4" placeholder="0000" disabled autocomplete="off" />
+        <button type="submit" id="guess-btn" disabled>Adivinar</button>
+      </form>
+      <p class="error" id="guess-error"></p>
+
+      <div class="boards">
+        <div class="board">
+          <h2>Tus intentos</h2>
+          <ul id="my-attempts" class="attempts-list"></ul>
+        </div>
+        <div class="board">
+          <h2>Intentos del rival</h2>
+          <ul id="opponent-attempts" class="attempts-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameover-screen" class="screen hidden">
+      <h2 id="gameover-title">—</h2>
+      <p id="gameover-detail"></p>
+      <button id="play-again-btn">Jugar de nuevo</button>
+    </section>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
