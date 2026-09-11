@@ -199,39 +199,6 @@ muteBtn.addEventListener("click", () => {
   updateMuteBtn();
 });
 
-/* ---------- Aviso de turno fuera de la pestaña ---------- */
-
-const originalTitle = document.title;
-let titleBlinkInterval = null;
-
-function stopTitleBlink() {
-  clearInterval(titleBlinkInterval);
-  titleBlinkInterval = null;
-  document.title = originalTitle;
-}
-
-function announceYourTurn() {
-  if (!document.hidden) return;
-  clearInterval(titleBlinkInterval);
-  let flip = false;
-  titleBlinkInterval = setInterval(() => {
-    document.title = flip ? originalTitle : "🔴 ¡Tu turno! · " + originalTitle;
-    flip = !flip;
-  }, 1000);
-
-  if (notifyEnabled && "Notification" in window && Notification.permission === "granted") {
-    try {
-      new Notification("¡Es tu turno!", { body: "Te toca adivinar en Adivina el Número." });
-    } catch (e) {
-      /* noop */
-    }
-  }
-}
-
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) stopTitleBlink();
-});
-
 /* ---------- Confeti ---------- */
 
 function launchConfetti() {
@@ -387,17 +354,6 @@ difficultyButtons.forEach((b) => {
   });
 });
 
-const notifyToggle = document.getElementById("notify-toggle");
-let notifyEnabled = readLS("n1v1_notify", "1") === "1";
-notifyToggle.checked = notifyEnabled;
-notifyToggle.addEventListener("change", () => {
-  notifyEnabled = notifyToggle.checked;
-  writeLS("n1v1_notify", notifyEnabled ? "1" : "0");
-  if (notifyEnabled && "Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-  }
-});
-
 const statsSummary = document.getElementById("stats-summary");
 refreshStatsSummary();
 
@@ -423,9 +379,6 @@ secretBoxesEl.addEventListener("digitsenter", () => {
 
 menuContinueBtn.addEventListener("click", () => {
   writeLS("n1v1_name", nameInput.value.trim());
-  if (notifyEnabled && "Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-  }
   secretBoxes = createDigitBoxes(secretBoxesEl, selectedLength);
   setupLengthHint.textContent = `Tu número secreto (${selectedLength} cifras)`;
   setupSubmitBtn.disabled = true;
@@ -516,9 +469,6 @@ function setTurn(yourTurn, turnSeconds) {
   if (yourTurn) {
     guessBoxes.focusFirst();
     sounds.yourTurn();
-    announceYourTurn();
-  } else {
-    stopTitleBlink();
   }
   startTurnTimer(turnSeconds);
 }
@@ -630,7 +580,6 @@ const surrenderBtn = document.getElementById("surrender-btn");
 function handleGameOver(payload, opts = {}) {
   const { won, yourSecret, opponentSecret, scoreYou, scoreOpponent, reason, champion } = payload;
   stopTurnTimer();
-  stopTitleBlink();
   updateScoreLabel(scoreYou, scoreOpponent);
 
   gameoverTitle.classList.remove("champion-glow");
@@ -769,7 +718,6 @@ socket.on("opponent_left", () => {
   clearInterval(reconnectCountdownInterval);
   clearSession();
   stopTurnTimer();
-  stopTitleBlink();
   gameoverTitle.classList.remove("champion-glow");
   gameoverTitle.textContent = "Tu rival se ha desconectado";
   gameoverDetail.textContent = "La partida ha finalizado.";

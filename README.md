@@ -35,9 +35,6 @@ número secreto de 4 cifras del rival. Backend en **FastAPI + Socket.IO**
   partida en curso (mismo rival, mismos intentos) en vez de perderla. Tu
   rival ve un aviso de "esperando a que vuelva" durante 60 segundos.
 - **Chat** en la propia partida.
-- **Aviso de turno fuera de la pestaña**: si activas la casilla del menú, el
-  título de la pestaña parpadea (y, si das permiso al navegador, salta una
-  notificación) en cuanto te toca jugar mientras tienes otra pestaña abierta.
 - **Tema claro/oscuro** conmutable desde el icono 🌙/☀️.
 - **Temporizador por turno**, sonidos y confeti al ganar (todo generado en el
   propio navegador, sin ficheros de audio externos). El icono 🔊/🔇 silencia
