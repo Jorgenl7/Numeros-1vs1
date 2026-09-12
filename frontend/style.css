@@ -1,8 +1,12 @@
 :root {
   --bg: #0a120f;
-  --bg-glow: radial-gradient(circle at 50% -10%, #14532d40, transparent 60%);
-  --card: #121e18;
+  --bg-glow:
+    radial-gradient(ellipse 780px 460px at 12% -8%, #14532d66, transparent 60%),
+    radial-gradient(ellipse 640px 480px at 108% 8%, #0d94884d, transparent 58%),
+    radial-gradient(ellipse 820px 560px at 50% 118%, #05966945, transparent 62%);
+  --card: #101c16;
   --card-border: #24392f;
+  --card-highlight: rgba(255, 255, 255, 0.045);
   --input-bg: #0a120f;
   --text: #e6f1ea;
   --muted: #8ca79a;
@@ -10,16 +14,34 @@
   --accent-strong: #6ee7b7;
   --accent-dark: #059669;
   --success: #22c55e;
+  --success-rgb: 34, 197, 94;
   --danger: #f87171;
   --warning: #fbbf24;
-  --shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+  --chip-friends: #f59e0b;
+  --chip-friends-bg: rgba(245, 158, 11, 0.26);
+  --chip-profile: #a78bfa;
+  --chip-profile-bg: rgba(167, 139, 250, 0.16);
+  --chip-settings: #94a3b8;
+  --chip-settings-bg: rgba(148, 163, 184, 0.14);
+  --shadow-sm: 0 2px 10px -4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 14px 32px -14px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 26px 60px -22px rgba(0, 0, 0, 0.65);
+  --shadow: var(--shadow-lg);
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 11px;
+  --font-display: "Manrope", "Inter", system-ui, sans-serif;
 }
 
 :root[data-theme="light"] {
-  --bg: #eef7f2;
-  --bg-glow: radial-gradient(circle at 50% -10%, #bbf7d088, transparent 60%);
+  --bg: #f2faf6;
+  --bg-glow:
+    radial-gradient(ellipse 780px 460px at 12% -8%, #bbf7d0aa, transparent 60%),
+    radial-gradient(ellipse 640px 480px at 108% 8%, #99f6e499, transparent 58%),
+    radial-gradient(ellipse 820px 560px at 50% 118%, #d9f99d99, transparent 62%);
   --card: #ffffff;
   --card-border: #dbebe1;
+  --card-highlight: rgba(255, 255, 255, 0.7);
   --input-bg: #f1f8f4;
   --text: #0f1f17;
   --muted: #5f7869;
@@ -27,9 +49,19 @@
   --accent-strong: #10b981;
   --accent-dark: #047857;
   --success: #16a34a;
+  --success-rgb: 22, 163, 74;
   --danger: #dc2626;
   --warning: #d97706;
-  --shadow: 0 20px 50px -25px rgba(15, 23, 42, 0.2);
+  --chip-friends: #d97706;
+  --chip-friends-bg: rgba(217, 119, 6, 0.12);
+  --chip-profile: #7c3aed;
+  --chip-profile-bg: rgba(124, 58, 237, 0.1);
+  --chip-settings: #64748b;
+  --chip-settings-bg: rgba(100, 116, 139, 0.1);
+  --shadow-sm: 0 2px 10px -4px rgba(15, 23, 42, 0.1);
+  --shadow-md: 0 14px 32px -14px rgba(15, 23, 42, 0.16);
+  --shadow-lg: 0 26px 60px -22px rgba(15, 23, 42, 0.2);
+  --shadow: var(--shadow-lg);
 }
 
 * {
@@ -40,10 +72,18 @@
   display: none !important;
 }
 
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 body {
   margin: 0;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  background: var(--bg) var(--bg-glow);
+  background-color: var(--bg);
+  background-image: var(--bg-glow);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -64,10 +104,11 @@ header {
 }
 
 header h1 {
-  font-size: 1.7rem;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
   font-weight: 800;
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 header h1 span {
@@ -92,12 +133,14 @@ header h1 span {
   cursor: pointer;
   font-family: inherit;
   color: var(--text);
-  transition: border-color 0.15s ease, transform 0.1s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .home-profile-summary:hover {
   border-color: var(--accent);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .home-avatar {
@@ -110,6 +153,7 @@ header h1 span {
   background: var(--card);
   border-radius: 50%;
   flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--input-bg), 0 0 0 4px var(--card-border);
 }
 
 #home-name {
@@ -129,22 +173,34 @@ header h1 span {
 }
 
 .home-btn {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 18px 20px;
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
   font-family: inherit;
   text-align: left;
   margin-bottom: 14px;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
 }
 
 .home-btn:hover {
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .home-btn:active {
@@ -152,6 +208,7 @@ header h1 span {
 }
 
 .home-btn-icon {
+  position: relative;
   font-size: 1.8rem;
   flex-shrink: 0;
   width: 48px;
@@ -159,16 +216,21 @@ header h1 span {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 13px;
+  z-index: 1;
+  transition: background 0.15s ease;
 }
 
 .home-btn-text {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
 .home-btn-text strong {
+  font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 800;
 }
@@ -190,17 +252,21 @@ header h1 span {
 }
 
 .home-btn-secondary {
-  background: var(--input-bg);
+  background: var(--card);
   border: 2px solid var(--card-border);
   color: var(--text);
 }
 
 .home-btn-secondary:hover {
-  border-color: var(--accent);
+  border-color: var(--chip-friends);
 }
 
 .home-btn-secondary .home-btn-icon {
-  background: var(--card);
+  background: var(--chip-friends-bg);
+}
+
+#join-room-btn .home-btn-icon {
+  background: var(--chip-friends-bg);
 }
 
 .home-icon-row {
@@ -214,30 +280,52 @@ header h1 span {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px;
-  background: var(--input-bg);
+  gap: 6px;
+  padding: 14px 12px;
+  background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
   cursor: pointer;
   font-family: inherit;
-  transition: border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .home-icon-btn:hover {
   border-color: var(--accent);
-  color: var(--accent-strong);
-  transform: translateY(-1px);
+  color: var(--text);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-.home-icon-btn span {
-  font-size: 1.3rem;
+.home-icon-btn span:first-child {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--input-bg);
+  font-size: 1.2rem;
+  transition: transform 0.15s ease;
+}
+
+.home-icon-btn:hover span:first-child {
+  transform: scale(1.08);
+}
+
+#open-profile-btn span:first-child {
+  background: var(--chip-profile-bg);
+}
+
+#open-settings-btn span:first-child {
+  background: var(--chip-settings-bg);
 }
 
 .home-icon-btn small {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -250,18 +338,21 @@ header h1 span {
   align-items: center;
   background: var(--input-bg);
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   padding: 14px 16px;
   margin-bottom: 12px;
   cursor: pointer;
   font-family: inherit;
   color: var(--text);
   font-size: 0.95rem;
-  transition: border-color 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .settings-row:hover {
   border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .settings-row-label {
@@ -308,7 +399,8 @@ header h1 span {
   color: var(--accent-strong);
   background: var(--input-bg);
   border: 2px dashed var(--card-border);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12);
   padding: 18px 10px;
   margin: 16px 0 20px;
 }
@@ -408,12 +500,26 @@ header h1 span {
   margin-top: 0;
 }
 
+header h1,
+#quickmatch-screen h2,
+#friends-screen h2,
+#settings-screen h2,
+#profile-screen h2,
+#join-code-screen h2,
+#room-code-screen h2,
+#lobby-screen h2,
+#secret-setup-screen h2,
+#gameover-title,
+#rematch-screen h2 {
+  font-family: var(--font-display);
+}
+
 .screen {
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 32px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--card-highlight);
   animation: screen-in 0.35s ease;
 }
 
@@ -476,7 +582,8 @@ header h1 span {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .avatar-option:hover {
@@ -504,15 +611,17 @@ header h1 span {
   padding: 14px 6px 12px;
   background: var(--input-bg);
   border: 2px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .difficulty-option:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .difficulty-number {
@@ -559,16 +668,18 @@ header h1 span {
   font-weight: 700;
   background: var(--input-bg);
   border: 2px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   caret-color: var(--accent);
-  transition: border-color 0.15s ease, transform 0.1s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .digit-box:focus {
   outline: none;
   border-color: var(--accent);
   transform: translateY(-2px);
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18);
 }
 
 .digit-box:disabled {
@@ -591,24 +702,34 @@ header h1 span {
 }
 
 .primary-btn {
+  position: relative;
+  overflow: hidden;
   display: block;
   width: 100%;
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   color: #04121f;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 13px 18px;
   font-size: 1rem;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   box-shadow: 0 8px 20px -8px var(--accent-dark);
+}
+
+.primary-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
 }
 
 .primary-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 26px -8px var(--accent-dark);
+  box-shadow: 0 12px 28px -8px var(--accent-dark);
 }
 
 .primary-btn:active:not(:disabled) {
@@ -690,6 +811,10 @@ header h1 span {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
+  padding: 10px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
   font-size: 0.95rem;
 }
 
@@ -731,6 +856,12 @@ header h1 span {
 .badge-your-turn {
   background: var(--success);
   color: #08290f;
+  animation: pulse-turn 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-turn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--success-rgb), 0.45); }
+  50% { box-shadow: 0 0 0 7px rgba(var(--success-rgb), 0); }
 }
 
 .badge-opponent-turn {
@@ -761,7 +892,8 @@ header h1 span {
   color: var(--accent-strong);
   background: var(--input-bg);
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12);
   padding: 6px 20px 6px 26px;
 }
 
@@ -825,6 +957,19 @@ header h1 span {
   gap: 6px;
   max-height: 260px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border) transparent;
+}
+
+.attempts-list::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.attempts-list::-webkit-scrollbar-thumb,
+.chat-messages::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 999px;
 }
 
 .attempts-list li {
@@ -897,6 +1042,8 @@ header h1 span {
   gap: 6px;
   max-height: 160px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border) transparent;
 }
 
 .chat-messages li {
