@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=3" />
+  <link rel="stylesheet" href="/static/style.css?v=5" />
 </head>
 <body>
   <div class="app">
@@ -15,39 +15,138 @@
       <h1>🔢 Adivina el Número <span>1 vs 1</span></h1>
     </header>
 
-    <section id="home-screen" class="screen hidden">
-      <button type="button" id="home-profile-summary" class="home-profile-summary">
-        <span id="home-avatar" class="home-avatar">🙂</span>
-        <span id="home-name">Jugador</span>
-        <span class="home-profile-edit">Editar ✎</span>
-      </button>
+    <section id="home-screen" class="home-shell hidden">
+      <div class="shell-inner">
+        <div class="shell-topbar">
+          <button type="button" id="home-profile-summary" class="shell-profile">
+            <span class="shell-avatar-wrap">
+              <span id="home-avatar" class="shell-avatar">🙂</span>
+              <span class="shell-avatar-edit">✎</span>
+            </span>
+            <span class="shell-profile-text">
+              <strong id="home-name">Jugador</strong>
+              <small>Jugador</small>
+            </span>
+          </button>
+          <div class="shell-topbar-actions">
+            <button type="button" id="open-settings-btn" class="shell-round-btn" aria-label="Ajustes" title="Ajustes">⚙️</button>
+            <button type="button" id="open-messages-btn" class="shell-round-btn" aria-label="Mensajes" title="Mensajes">✉️</button>
+          </div>
+        </div>
 
-      <button type="button" id="find-match-btn" class="home-btn home-btn-primary">
-        <span class="home-btn-icon">🔍</span>
-        <span class="home-btn-text">
-          <strong>Buscar Rival</strong>
-          <small>Emparejamiento aleatorio</small>
-        </span>
-      </button>
+        <div class="shell-title-block">
+          <h1 class="shell-title">Adivina el Número <span>1 vs 1</span></h1>
+          <p class="shell-subtitle">Menú Principal</p>
+        </div>
 
-      <button type="button" id="play-friends-btn" class="home-btn home-btn-secondary">
-        <span class="home-btn-icon">👥</span>
-        <span class="home-btn-text">
-          <strong>Jugar con Amigos</strong>
-          <small>Con código o enlace</small>
-        </span>
-      </button>
+        <div class="shell-actions">
+          <button type="button" id="find-match-btn" class="shell-cta shell-cta-primary">
+            <span class="shell-cta-icon">🎲</span>
+            Buscar Rival
+          </button>
+          <button type="button" id="play-friends-btn" class="shell-cta shell-cta-secondary">
+            <span class="shell-cta-icon">👥</span>
+            Jugar con Amigos
+          </button>
+        </div>
 
-      <div class="home-icon-row">
-        <button type="button" id="open-profile-btn" class="home-icon-btn">
-          <span>👤</span>
-          <small>Perfil</small>
-        </button>
-        <button type="button" id="open-settings-btn" class="home-icon-btn">
-          <span>⚙️</span>
-          <small>Ajustes</small>
-        </button>
+        <p id="messages-toast" class="shell-toast hidden">No tienes mensajes nuevos todavía ✉️</p>
       </div>
+
+      <nav class="shell-bottom-nav">
+        <button type="button" class="shell-nav-item active" data-nav="home">
+          <span>🏠</span><small>Inicio</small>
+        </button>
+        <button type="button" class="shell-nav-item" data-nav="inventory">
+          <span>🎒</span><small>Inventario</small>
+        </button>
+        <button type="button" class="shell-nav-item" data-nav="ranking">
+          <span>🏆</span><small>Ranking</small>
+        </button>
+        <button type="button" class="shell-nav-item" data-nav="shop">
+          <span>🛍️</span><small>Tienda</small>
+        </button>
+      </nav>
+    </section>
+
+    <section id="inventory-screen" class="home-shell hidden">
+      <div class="shell-inner">
+        <div class="shell-header-row">
+          <h2 class="shell-page-title">🎒 Inventario</h2>
+          <span class="shell-coins">🪙 <span id="inventory-coins">0</span></span>
+        </div>
+
+        <p class="shell-section-label">Tu avatar equipado</p>
+        <div class="shell-equipped-avatar" id="inventory-equipped-avatar">🙂</div>
+
+        <p class="shell-section-label">Avatares</p>
+        <div id="inventory-avatar-grid" class="shell-grid"></div>
+
+        <p class="shell-section-label">Temas de color desbloqueados</p>
+        <div id="inventory-theme-grid" class="shell-grid"></div>
+      </div>
+
+      <nav class="shell-bottom-nav">
+        <button type="button" class="shell-nav-item" data-nav="home"><span>🏠</span><small>Inicio</small></button>
+        <button type="button" class="shell-nav-item active" data-nav="inventory"><span>🎒</span><small>Inventario</small></button>
+        <button type="button" class="shell-nav-item" data-nav="ranking"><span>🏆</span><small>Ranking</small></button>
+        <button type="button" class="shell-nav-item" data-nav="shop"><span>🛍️</span><small>Tienda</small></button>
+      </nav>
+    </section>
+
+    <section id="ranking-screen" class="home-shell hidden">
+      <div class="shell-inner">
+        <h2 class="shell-page-title">🏆 Ranking</h2>
+
+        <div class="shell-rank-card glass-card">
+          <span class="shell-rank-tier" id="ranking-tier">Bronce 🥉</span>
+          <span class="shell-rank-caption">Tu rango actual</span>
+        </div>
+
+        <div class="shell-stats-grid">
+          <div class="shell-stat-card glass-card">
+            <strong id="ranking-wins">0</strong>
+            <small>Victorias</small>
+          </div>
+          <div class="shell-stat-card glass-card">
+            <strong id="ranking-losses">0</strong>
+            <small>Derrotas</small>
+          </div>
+          <div class="shell-stat-card glass-card">
+            <strong id="ranking-winrate">0%</strong>
+            <small>% Victorias</small>
+          </div>
+          <div class="shell-stat-card glass-card">
+            <strong id="ranking-streak">0</strong>
+            <small>Mejor racha</small>
+          </div>
+        </div>
+      </div>
+
+      <nav class="shell-bottom-nav">
+        <button type="button" class="shell-nav-item" data-nav="home"><span>🏠</span><small>Inicio</small></button>
+        <button type="button" class="shell-nav-item" data-nav="inventory"><span>🎒</span><small>Inventario</small></button>
+        <button type="button" class="shell-nav-item active" data-nav="ranking"><span>🏆</span><small>Ranking</small></button>
+        <button type="button" class="shell-nav-item" data-nav="shop"><span>🛍️</span><small>Tienda</small></button>
+      </nav>
+    </section>
+
+    <section id="shop-screen" class="home-shell hidden">
+      <div class="shell-inner">
+        <div class="shell-header-row">
+          <h2 class="shell-page-title">🛍️ Tienda</h2>
+          <span class="shell-coins">🪙 <span id="shop-coins">0</span></span>
+        </div>
+        <p class="shell-section-label">Gana 10 monedas por cada victoria y desbloquea temas de color para la app.</p>
+        <div id="shop-theme-grid" class="shell-grid"></div>
+      </div>
+
+      <nav class="shell-bottom-nav">
+        <button type="button" class="shell-nav-item" data-nav="home"><span>🏠</span><small>Inicio</small></button>
+        <button type="button" class="shell-nav-item" data-nav="inventory"><span>🎒</span><small>Inventario</small></button>
+        <button type="button" class="shell-nav-item" data-nav="ranking"><span>🏆</span><small>Ranking</small></button>
+        <button type="button" class="shell-nav-item active" data-nav="shop"><span>🛍️</span><small>Tienda</small></button>
+      </nav>
     </section>
 
     <section id="profile-screen" class="screen hidden">
@@ -276,6 +375,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=5"></script>
 </body>
 </html>

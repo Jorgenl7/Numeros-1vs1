@@ -20,9 +20,19 @@ número secreto de 4 cifras del rival. Backend en **FastAPI + Socket.IO**
 
 ## Funciones
 
-- **Pantalla de inicio** con dos acciones principales — "Buscar Rival"
-  (emparejamiento aleatorio) y "Jugar con Amigos" (código o enlace) — y
-  accesos a Perfil y Ajustes.
+- **Menú principal** con estilo "app móvil" (glassmorphism): tarjeta de
+  perfil translúcida arriba, accesos a Ajustes y Mensajes, dos botones de
+  acción grandes ("Buscar Rival" y "Jugar con Amigos") y una barra de
+  navegación inferior fija con 4 secciones: Inicio, Inventario, Ranking y
+  Tienda.
+- **Monedas e Inventario/Tienda**: cada victoria da 10 monedas; se pueden
+  gastar en la Tienda para desbloquear temas de color alternativos para toda
+  la app (Océano, Atardecer, Lavanda, Rubí), que luego se equipan desde el
+  Inventario junto con el avatar. Todo se guarda en el navegador
+  (localStorage), sin necesidad de cuenta.
+- **Ranking personal**: rango (Bronce/Plata/Oro/Platino) según tus victorias
+  totales, más victorias/derrotas, % de victorias y mejor racha — estadística
+  local de este navegador, no un ranking global entre jugadores.
 - **Perfil persistente**: nombre y avatar (emoji) se eligen una vez y se
   recuerdan para todas las partidas; se pueden cambiar cuando quieras desde
   "Perfil".

@@ -227,6 +227,9 @@ function stopTurnTimer() {
 
 const screens = {
   home: document.getElementById("home-screen"),
+  inventory: document.getElementById("inventory-screen"),
+  ranking: document.getElementById("ranking-screen"),
+  shop: document.getElementById("shop-screen"),
   profile: document.getElementById("profile-screen"),
   settings: document.getElementById("settings-screen"),
   quickmatch: document.getElementById("quickmatch-screen"),
@@ -241,9 +244,12 @@ const screens = {
   rematch: document.getElementById("rematch-screen"),
 };
 
+const SHELL_SCREENS = new Set(["home", "inventory", "ranking", "shop"]);
+
 function showScreen(name) {
   Object.values(screens).forEach((el) => el.classList.add("hidden"));
   screens[name].classList.remove("hidden");
+  document.body.classList.toggle("shell-mode", SHELL_SCREENS.has(name));
 }
 
 function updateScoreLabel(you, opponent) {
@@ -306,8 +312,9 @@ const homeAvatarEl = document.getElementById("home-avatar");
 const homeNameEl = document.getElementById("home-name");
 const findMatchBtn = document.getElementById("find-match-btn");
 const playFriendsBtn = document.getElementById("play-friends-btn");
-const openProfileBtn = document.getElementById("open-profile-btn");
 const openSettingsBtn = document.getElementById("open-settings-btn");
+const openMessagesBtn = document.getElementById("open-messages-btn");
+const messagesToast = document.getElementById("messages-toast");
 
 function refreshHomeSummary() {
   homeAvatarEl.textContent = readLS("n1v1_avatar", AVATAR_OPTIONS[0]);
@@ -326,10 +333,28 @@ findMatchBtn.addEventListener("click", () => {
 });
 playFriendsBtn.addEventListener("click", () => showScreen("friends"));
 homeProfileSummary.addEventListener("click", openProfile);
-openProfileBtn.addEventListener("click", openProfile);
 openSettingsBtn.addEventListener("click", () => {
   refreshSettingsDisplay();
   showScreen("settings");
+});
+
+let messagesToastTimeout = null;
+openMessagesBtn.addEventListener("click", () => {
+  messagesToast.classList.remove("hidden");
+  clearTimeout(messagesToastTimeout);
+  messagesToastTimeout = setTimeout(() => messagesToast.classList.add("hidden"), 2500);
+});
+
+/* ---------- Navegación inferior (Inicio / Inventario / Ranking / Tienda) ---------- */
+
+document.querySelectorAll("[data-nav]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.nav;
+    if (target === "inventory") refreshInventoryScreen();
+    if (target === "ranking") refreshRankingScreen();
+    if (target === "shop") refreshShopScreen();
+    showScreen(target);
+  });
 });
 
 /* ---------- Perfil ---------- */
@@ -369,6 +394,182 @@ function saveProfileAndGoHome() {
 
 profileSaveBtn.addEventListener("click", saveProfileAndGoHome);
 profileBackBtn.addEventListener("click", saveProfileAndGoHome);
+
+/* ---------- Monedas, inventario, ranking y tienda ---------- */
+
+const WIN_COINS = 10;
+
+function readCoins() {
+  return parseInt(readLS("n1v1_coins", "0"), 10) || 0;
+}
+function writeCoins(value) {
+  writeLS("n1v1_coins", String(Math.max(0, value)));
+}
+
+function readBestStreak() {
+  return parseInt(readLS("n1v1_best_streak", "0"), 10) || 0;
+}
+function readCurrentStreak() {
+  return parseInt(readLS("n1v1_current_streak", "0"), 10) || 0;
+}
+
+function readOwnedThemes() {
+  try {
+    return JSON.parse(localStorage.getItem("n1v1_owned_themes") || '["menta"]');
+  } catch (e) {
+    return ["menta"];
+  }
+}
+function writeOwnedThemes(list) {
+  writeLS("n1v1_owned_themes", JSON.stringify(list));
+}
+function readEquippedTheme() {
+  return readLS("n1v1_equipped_theme", "menta");
+}
+function writeEquippedTheme(id) {
+  writeLS("n1v1_equipped_theme", id);
+}
+
+const ACCENT_THEMES = [
+  { id: "menta", label: "Menta", price: 0, accent: "#34d399", accentStrong: "#6ee7b7", accentDark: "#059669" },
+  { id: "oceano", label: "Océano", price: 30, accent: "#38bdf8", accentStrong: "#7dd3fc", accentDark: "#0284c7" },
+  { id: "atardecer", label: "Atardecer", price: 30, accent: "#fb923c", accentStrong: "#fdba74", accentDark: "#c2410c" },
+  { id: "lavanda", label: "Lavanda", price: 40, accent: "#a78bfa", accentStrong: "#c4b5fd", accentDark: "#7c3aed" },
+  { id: "rubi", label: "Rubí", price: 40, accent: "#fb7185", accentStrong: "#fda4af", accentDark: "#be123c" },
+];
+
+function applyAccentTheme(id) {
+  const theme = ACCENT_THEMES.find((t) => t.id === id) || ACCENT_THEMES[0];
+  const root = document.documentElement.style;
+  if (theme.id === "menta") {
+    root.removeProperty("--accent");
+    root.removeProperty("--accent-strong");
+    root.removeProperty("--accent-dark");
+    return;
+  }
+  root.setProperty("--accent", theme.accent);
+  root.setProperty("--accent-strong", theme.accentStrong);
+  root.setProperty("--accent-dark", theme.accentDark);
+}
+
+applyAccentTheme(readEquippedTheme());
+
+function rankTier(wins) {
+  if (wins >= 30) return "Platino 💎";
+  if (wins >= 15) return "Oro 🥇";
+  if (wins >= 5) return "Plata 🥈";
+  return "Bronce 🥉";
+}
+
+const inventoryCoinsEl = document.getElementById("inventory-coins");
+const inventoryEquippedAvatarEl = document.getElementById("inventory-equipped-avatar");
+const inventoryAvatarGrid = document.getElementById("inventory-avatar-grid");
+const inventoryThemeGrid = document.getElementById("inventory-theme-grid");
+
+function renderInventoryAvatars() {
+  const current = readLS("n1v1_avatar", AVATAR_OPTIONS[0]);
+  inventoryEquippedAvatarEl.textContent = current;
+  inventoryAvatarGrid.innerHTML = "";
+  AVATAR_OPTIONS.forEach((emoji) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "shell-avatar-card" + (emoji === current ? " equipped" : "");
+    btn.textContent = emoji;
+    btn.addEventListener("click", () => {
+      selectedAvatar = emoji;
+      writeLS("n1v1_avatar", emoji);
+      avatarPicker.querySelectorAll(".avatar-option").forEach((b) => {
+        b.classList.toggle("selected", b.textContent === emoji);
+      });
+      refreshHomeSummary();
+      renderInventoryAvatars();
+    });
+    inventoryAvatarGrid.appendChild(btn);
+  });
+}
+
+function renderThemeCard(theme, { showPrice }) {
+  const owned = readOwnedThemes();
+  const equipped = readEquippedTheme();
+  const isOwned = owned.includes(theme.id);
+  const isEquipped = equipped === theme.id;
+
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "shell-theme-card" + (isEquipped ? " equipped" : "");
+  card.style.setProperty("--swatch", theme.accent);
+  const status = isEquipped ? "Equipado" : isOwned ? "Equipar" : showPrice ? `🪙 ${theme.price}` : "Bloqueado";
+  card.innerHTML = `<span class="shell-theme-swatch"></span><strong>${theme.label}</strong><small>${status}</small>`;
+
+  card.addEventListener("click", () => {
+    if (isEquipped) return;
+    if (!isOwned) {
+      if (!showPrice) return;
+      const coins = readCoins();
+      if (coins < theme.price) {
+        card.classList.add("shake");
+        setTimeout(() => card.classList.remove("shake"), 300);
+        return;
+      }
+      writeCoins(coins - theme.price);
+      writeOwnedThemes([...owned, theme.id]);
+      shopCoinsEl.textContent = readCoins();
+      inventoryCoinsEl.textContent = readCoins();
+    }
+    writeEquippedTheme(theme.id);
+    applyAccentTheme(theme.id);
+    renderShopThemes();
+    renderInventoryThemes();
+  });
+
+  return card;
+}
+
+function renderInventoryThemes() {
+  const owned = readOwnedThemes();
+  inventoryThemeGrid.innerHTML = "";
+  ACCENT_THEMES.filter((t) => owned.includes(t.id)).forEach((theme) => {
+    inventoryThemeGrid.appendChild(renderThemeCard(theme, { showPrice: false }));
+  });
+}
+
+function refreshInventoryScreen() {
+  inventoryCoinsEl.textContent = readCoins();
+  renderInventoryAvatars();
+  renderInventoryThemes();
+}
+
+const rankingTierEl = document.getElementById("ranking-tier");
+const rankingWinsEl = document.getElementById("ranking-wins");
+const rankingLossesEl = document.getElementById("ranking-losses");
+const rankingWinrateEl = document.getElementById("ranking-winrate");
+const rankingStreakEl = document.getElementById("ranking-streak");
+
+function refreshRankingScreen() {
+  const stats = readStats();
+  const total = stats.wins + stats.losses;
+  const winrate = total > 0 ? Math.round((stats.wins / total) * 100) : 0;
+  rankingTierEl.textContent = rankTier(stats.wins);
+  rankingWinsEl.textContent = stats.wins;
+  rankingLossesEl.textContent = stats.losses;
+  rankingWinrateEl.textContent = winrate + "%";
+  rankingStreakEl.textContent = readBestStreak();
+}
+
+const shopCoinsEl = document.getElementById("shop-coins");
+const shopThemeGrid = document.getElementById("shop-theme-grid");
+
+function renderShopThemes() {
+  shopThemeGrid.innerHTML = "";
+  ACCENT_THEMES.forEach((theme) => {
+    shopThemeGrid.appendChild(renderThemeCard(theme, { showPrice: true }));
+  });
+}
+
+function refreshShopScreen() {
+  shopCoinsEl.textContent = readCoins();
+  renderShopThemes();
+}
 
 /* ---------- Ajustes ---------- */
 
@@ -887,9 +1088,14 @@ function handleGameOver(payload, opts = {}) {
     writeStats(stats);
 
     if (won) {
+      writeCoins(readCoins() + WIN_COINS);
+      const streak = readCurrentStreak() + 1;
+      writeLS("n1v1_current_streak", String(streak));
+      if (streak > readBestStreak()) writeLS("n1v1_best_streak", String(streak));
       sounds.win();
       launchConfetti();
     } else {
+      writeLS("n1v1_current_streak", "0");
       sounds.lose();
     }
   }
