@@ -1638,6 +1638,29 @@ body.shell-mode > .app > header {
   animation: shake 0.3s ease;
 }
 
+.shop-avatar-emoji {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.frame-swatch {
+  background: transparent !important;
+  border: 4px solid var(--swatch, var(--shell-glass-border));
+  box-shadow: none;
+}
+
+body.has-frame .shell-avatar {
+  box-shadow: 0 0 0 3px var(--frame-color);
+}
+
+body.has-frame .shell-equipped-avatar {
+  box-shadow: var(--shell-glass-shadow), 0 0 0 3px var(--frame-color);
+}
+
+body.has-frame .profile-avatar-preview {
+  box-shadow: var(--shadow-sm), 0 0 0 3px var(--frame-color);
+}
+
 .shell-rank-card {
   text-align: center;
   padding: 24px;

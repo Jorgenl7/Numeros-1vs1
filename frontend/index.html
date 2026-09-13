@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=7" />
+  <link rel="stylesheet" href="/static/style.css?v=8" />
 </head>
 <body>
   <div class="app">
@@ -84,6 +84,9 @@
 
         <p class="shell-section-label">Temas de color desbloqueados</p>
         <div id="inventory-theme-grid" class="shell-grid"></div>
+
+        <p class="shell-section-label">Marcos de avatar desbloqueados</p>
+        <div id="inventory-frame-grid" class="shell-grid"></div>
       </div>
 
       <nav class="shell-bottom-nav">
@@ -137,8 +140,16 @@
           <h2 class="shell-page-title">🛍️ Tienda</h2>
           <span class="shell-coins"><span class="coin-icon"></span> <span id="shop-coins">0</span></span>
         </div>
-        <p class="shell-section-label">Gana 10 monedas por cada victoria y desbloquea temas de color para la app.</p>
+        <p class="shell-section-label">Gana 10 monedas por cada victoria y desbloquea cosas nuevas para la app.</p>
+
+        <p class="shell-section-label">Temas de color</p>
         <div id="shop-theme-grid" class="shell-grid"></div>
+
+        <p class="shell-section-label">Avatares premium</p>
+        <div id="shop-avatar-grid" class="shell-grid"></div>
+
+        <p class="shell-section-label">Marcos de avatar</p>
+        <div id="shop-frame-grid" class="shell-grid"></div>
 
         <p class="shell-section-label">Código de regalo</p>
         <div class="shell-giftcode-row">
@@ -396,6 +407,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="/static/app.js?v=7"></script>
+  <script src="/static/app.js?v=8"></script>
 </body>
 </html>

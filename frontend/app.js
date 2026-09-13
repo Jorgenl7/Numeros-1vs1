@@ -1,6 +1,8 @@
 const socket = io();
 
 const AVATAR_OPTIONS = ["🙂", "😎", "🦊", "🐼", "🚀", "🔥", "🎯", "🐙", "🍀", "🦄"];
+const PREMIUM_AVATARS = ["🐲", "🦁", "🐺", "🧙", "👽", "🤖"];
+const AVATAR_PRICES = { "🐲": 60, "🦁": 50, "🐺": 40, "🧙": 60, "👽": 70, "🤖": 70 };
 
 function isValidLength(value, length) {
   return new RegExp(`^\\d{${length}}$`).test(value);
@@ -457,7 +459,56 @@ const ACCENT_THEMES = [
   { id: "atardecer", label: "Atardecer", price: 30, accent: "#fb923c", accentStrong: "#fdba74", accentDark: "#c2410c" },
   { id: "lavanda", label: "Lavanda", price: 40, accent: "#a78bfa", accentStrong: "#c4b5fd", accentDark: "#7c3aed" },
   { id: "rubi", label: "Rubí", price: 40, accent: "#fb7185", accentStrong: "#fda4af", accentDark: "#be123c" },
+  { id: "bosque", label: "Bosque", price: 50, accent: "#4ade80", accentStrong: "#86efac", accentDark: "#15803d" },
+  { id: "grafito", label: "Grafito", price: 50, accent: "#94a3b8", accentStrong: "#cbd5e1", accentDark: "#475569" },
+  { id: "oro", label: "Oro", price: 80, accent: "#facc15", accentStrong: "#fde047", accentDark: "#ca8a04" },
 ];
+
+/* ---------- Avatares premium ---------- */
+
+function readOwnedAvatars() {
+  try {
+    return JSON.parse(localStorage.getItem("n1v1_owned_avatars") || JSON.stringify(AVATAR_OPTIONS));
+  } catch (e) {
+    return AVATAR_OPTIONS.slice();
+  }
+}
+function writeOwnedAvatars(list) {
+  writeLS("n1v1_owned_avatars", JSON.stringify(list));
+}
+
+/* ---------- Marcos de avatar ---------- */
+
+const AVATAR_FRAMES = [
+  { id: "ninguno", label: "Sin marco", price: 0, color: "transparent" },
+  { id: "esmeralda", label: "Esmeralda", price: 40, color: "#34d399" },
+  { id: "zafiro", label: "Zafiro", price: 40, color: "#38bdf8" },
+  { id: "fuego", label: "Fuego", price: 50, color: "#fb7185" },
+  { id: "oro", label: "Oro", price: 70, color: "#facc15" },
+];
+
+function readOwnedFrames() {
+  try {
+    return JSON.parse(localStorage.getItem("n1v1_owned_frames") || '["ninguno"]');
+  } catch (e) {
+    return ["ninguno"];
+  }
+}
+function writeOwnedFrames(list) {
+  writeLS("n1v1_owned_frames", JSON.stringify(list));
+}
+function readEquippedFrame() {
+  return readLS("n1v1_equipped_frame", "ninguno");
+}
+function writeEquippedFrame(id) {
+  writeLS("n1v1_equipped_frame", id);
+}
+function applyAvatarFrame(id) {
+  const frame = AVATAR_FRAMES.find((f) => f.id === id) || AVATAR_FRAMES[0];
+  document.documentElement.style.setProperty("--frame-color", frame.color);
+  document.body.classList.toggle("has-frame", frame.id !== "ninguno");
+}
+applyAvatarFrame(readEquippedFrame());
 
 function applyAccentTheme(id) {
   const theme = ACCENT_THEMES.find((t) => t.id === id) || ACCENT_THEMES[0];
@@ -491,7 +542,7 @@ function renderInventoryAvatars() {
   const current = readLS("n1v1_avatar", AVATAR_OPTIONS[0]);
   inventoryEquippedAvatarEl.textContent = current;
   inventoryAvatarGrid.innerHTML = "";
-  AVATAR_OPTIONS.forEach((emoji) => {
+  readOwnedAvatars().forEach((emoji) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "shell-avatar-card" + (emoji === current ? " equipped" : "");
@@ -564,6 +615,107 @@ function refreshInventoryScreen() {
   inventoryCoinsEl.textContent = readCoins();
   renderInventoryAvatars();
   renderInventoryThemes();
+  renderInventoryFrames();
+}
+
+function renderAvatarShopCard(emoji, price) {
+  const owned = readOwnedAvatars();
+  const current = readLS("n1v1_avatar", AVATAR_OPTIONS[0]);
+  const isOwned = owned.includes(emoji);
+  const isEquipped = current === emoji;
+
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "shell-theme-card" + (isEquipped ? " equipped" : "");
+  const status = isEquipped ? "Equipado" : isOwned ? "Equipar" : `<span class="coin-icon"></span> ${price}`;
+  card.innerHTML = `<span class="shop-avatar-emoji">${emoji}</span><small>${status}</small>`;
+
+  card.addEventListener("click", () => {
+    if (isEquipped) return;
+    if (!isOwned) {
+      const coins = readCoins();
+      if (coins < price) {
+        card.classList.add("shake");
+        setTimeout(() => card.classList.remove("shake"), 300);
+        return;
+      }
+      writeCoins(coins - price);
+      writeOwnedAvatars([...owned, emoji]);
+      shopCoinsEl.textContent = readCoins();
+      inventoryCoinsEl.textContent = readCoins();
+    }
+    selectedAvatar = emoji;
+    writeLS("n1v1_avatar", emoji);
+    refreshHomeSummary();
+    renderShopAvatars();
+    renderInventoryAvatars();
+  });
+
+  return card;
+}
+
+function renderShopAvatars() {
+  shopAvatarGrid.innerHTML = "";
+  PREMIUM_AVATARS.forEach((emoji) => {
+    shopAvatarGrid.appendChild(renderAvatarShopCard(emoji, AVATAR_PRICES[emoji]));
+  });
+}
+
+function renderFrameCard(frame) {
+  const owned = readOwnedFrames();
+  const equipped = readEquippedFrame();
+  const isOwned = owned.includes(frame.id);
+  const isEquipped = equipped === frame.id;
+
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "shell-theme-card" + (isEquipped ? " equipped" : "");
+  card.style.setProperty("--swatch", frame.color === "transparent" ? "var(--shell-glass-border)" : frame.color);
+  const status = isEquipped
+    ? "Equipado"
+    : isOwned
+    ? "Equipar"
+    : frame.price === 0
+    ? "Gratis"
+    : `<span class="coin-icon"></span> ${frame.price}`;
+  card.innerHTML = `<span class="shell-theme-swatch frame-swatch"></span><strong>${frame.label}</strong><small>${status}</small>`;
+
+  card.addEventListener("click", () => {
+    if (isEquipped) return;
+    if (!isOwned) {
+      if (frame.price > 0) {
+        const coins = readCoins();
+        if (coins < frame.price) {
+          card.classList.add("shake");
+          setTimeout(() => card.classList.remove("shake"), 300);
+          return;
+        }
+        writeCoins(coins - frame.price);
+        shopCoinsEl.textContent = readCoins();
+        inventoryCoinsEl.textContent = readCoins();
+      }
+      writeOwnedFrames([...owned, frame.id]);
+    }
+    writeEquippedFrame(frame.id);
+    applyAvatarFrame(frame.id);
+    renderShopFrames();
+    renderInventoryFrames();
+  });
+
+  return card;
+}
+
+function renderShopFrames() {
+  shopFrameGrid.innerHTML = "";
+  AVATAR_FRAMES.forEach((frame) => shopFrameGrid.appendChild(renderFrameCard(frame)));
+}
+
+function renderInventoryFrames() {
+  const owned = readOwnedFrames();
+  inventoryFrameGrid.innerHTML = "";
+  AVATAR_FRAMES.filter((f) => owned.includes(f.id)).forEach((frame) => {
+    inventoryFrameGrid.appendChild(renderFrameCard(frame));
+  });
 }
 
 const rankingTierEl = document.getElementById("ranking-tier");
@@ -585,6 +737,9 @@ function refreshRankingScreen() {
 
 const shopCoinsEl = document.getElementById("shop-coins");
 const shopThemeGrid = document.getElementById("shop-theme-grid");
+const shopAvatarGrid = document.getElementById("shop-avatar-grid");
+const shopFrameGrid = document.getElementById("shop-frame-grid");
+const inventoryFrameGrid = document.getElementById("inventory-frame-grid");
 
 function renderShopThemes() {
   shopThemeGrid.innerHTML = "";
@@ -596,6 +751,8 @@ function renderShopThemes() {
 function refreshShopScreen() {
   shopCoinsEl.textContent = readCoins();
   renderShopThemes();
+  renderShopAvatars();
+  renderShopFrames();
   giftCodeMessage.textContent = "";
 }
 
