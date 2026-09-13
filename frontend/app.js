@@ -759,7 +759,7 @@ function refreshShopScreen() {
 /* ---------- Código de regalo ---------- */
 
 const GIFT_CODE = "labombalepeta";
-const GIFT_CODE_COINS = 50;
+const GIFT_CODE_COINS = 250;
 
 const giftCodeInput = document.getElementById("gift-code-input");
 const giftCodeBtn = document.getElementById("gift-code-btn");
