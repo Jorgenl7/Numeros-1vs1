@@ -705,6 +705,7 @@ socket.on("lobby_waiting_secret", () => {
 /* ---------- Pantalla de partida ---------- */
 
 const waitingText = document.getElementById("waiting-text");
+const waitingCancelBtn = document.getElementById("waiting-cancel-btn");
 const opponentLabel = document.getElementById("opponent-label");
 const scoreLabel = document.getElementById("score-label");
 const mySecretLabel = document.getElementById("my-secret-label");
@@ -715,6 +716,12 @@ const guessBtn = document.getElementById("guess-btn");
 const guessError = document.getElementById("guess-error");
 const myAttemptsList = document.getElementById("my-attempts");
 const opponentAttemptsList = document.getElementById("opponent-attempts");
+
+waitingCancelBtn.addEventListener("click", () => {
+  socket.emit("cancel_lobby");
+  clearSession();
+  goHome();
+});
 
 let myToken = "";
 let mySecret = "";

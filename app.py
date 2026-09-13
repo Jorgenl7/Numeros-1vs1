@@ -256,6 +256,7 @@ async def submit_lobby_secret(sid, data):
 
 @sio.event
 async def cancel_lobby(sid, data=None):
+    games.cancel_waiting(sid)
     other_sid = games.cancel_lobby(sid)
     if other_sid:
         await sio.emit("lobby_cancelled", {"message": "Tu amigo ha cancelado la sala."}, to=other_sid)

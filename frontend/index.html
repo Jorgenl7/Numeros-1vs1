@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=3" />
 </head>
 <body>
   <div class="app">
@@ -201,6 +201,7 @@
     <section id="waiting-screen" class="screen hidden">
       <div class="spinner"></div>
       <p id="waiting-text">Buscando rival...</p>
+      <button type="button" id="waiting-cancel-btn" class="link-btn">Cancelar</button>
     </section>
 
     <section id="game-screen" class="screen hidden">
@@ -275,6 +276,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=3"></script>
 </body>
 </html>
