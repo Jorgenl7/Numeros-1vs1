@@ -1483,6 +1483,71 @@ body.shell-mode > .app > header {
   margin: 20px 0 10px;
 }
 
+.shell-giftcode-row {
+  display: flex;
+  gap: 8px;
+}
+
+.shell-giftcode-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--shell-glass-bg);
+  border: 1px solid var(--shell-glass-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--shell-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease;
+}
+
+.shell-giftcode-input::placeholder {
+  color: var(--shell-muted);
+}
+
+.shell-giftcode-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.shell-giftcode-input.shake {
+  animation: shake 0.3s ease;
+  border-color: var(--danger);
+}
+
+.shell-giftcode-btn {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.shell-giftcode-btn:hover {
+  transform: translateY(-1px);
+}
+
+.shell-giftcode-message {
+  min-height: 1.2em;
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.shell-giftcode-message.success {
+  color: var(--success);
+}
+
+.shell-giftcode-message.error {
+  color: var(--danger);
+}
+
 .shell-equipped-avatar {
   width: 72px;
   height: 72px;

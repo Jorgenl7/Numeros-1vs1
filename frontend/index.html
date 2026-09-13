@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=6" />
+  <link rel="stylesheet" href="/static/style.css?v=7" />
 </head>
 <body>
   <div class="app">
@@ -139,6 +139,13 @@
         </div>
         <p class="shell-section-label">Gana 10 monedas por cada victoria y desbloquea temas de color para la app.</p>
         <div id="shop-theme-grid" class="shell-grid"></div>
+
+        <p class="shell-section-label">Código de regalo</p>
+        <div class="shell-giftcode-row">
+          <input type="text" id="gift-code-input" class="shell-giftcode-input" placeholder="Introduce un código" autocomplete="off" />
+          <button type="button" id="gift-code-btn" class="shell-giftcode-btn">Canjear</button>
+        </div>
+        <p id="gift-code-message" class="shell-giftcode-message"></p>
       </div>
 
       <nav class="shell-bottom-nav">
@@ -389,6 +396,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="/static/app.js?v=6"></script>
+  <script src="/static/app.js?v=7"></script>
 </body>
 </html>

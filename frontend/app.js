@@ -176,6 +176,10 @@ const sounds = {
   },
   timeout: () => beep({ freq: 220, duration: 0.25, type: "sawtooth", volume: 0.15 }),
   chat: () => beep({ freq: 720, duration: 0.06, type: "sine", volume: 0.08 }),
+  giftCode: () => {
+    beep({ freq: 784, duration: 0.1, volume: 0.18 });
+    beep({ freq: 988, duration: 0.18, volume: 0.2, delay: 0.1 });
+  },
 };
 
 /* ---------- Confeti ---------- */
@@ -592,7 +596,42 @@ function renderShopThemes() {
 function refreshShopScreen() {
   shopCoinsEl.textContent = readCoins();
   renderShopThemes();
+  giftCodeMessage.textContent = "";
 }
+
+/* ---------- Código de regalo ---------- */
+
+const GIFT_CODE = "labombalepeta";
+const GIFT_CODE_COINS = 50;
+
+const giftCodeInput = document.getElementById("gift-code-input");
+const giftCodeBtn = document.getElementById("gift-code-btn");
+const giftCodeMessage = document.getElementById("gift-code-message");
+
+function redeemGiftCode() {
+  const code = giftCodeInput.value.trim().toLowerCase();
+  if (!code) return;
+
+  if (code === GIFT_CODE) {
+    resumeAudio();
+    writeCoins(readCoins() + GIFT_CODE_COINS);
+    shopCoinsEl.textContent = readCoins();
+    giftCodeMessage.textContent = `¡+${GIFT_CODE_COINS} monedas!`;
+    giftCodeMessage.className = "shell-giftcode-message success";
+    giftCodeInput.value = "";
+    sounds.giftCode();
+  } else {
+    giftCodeMessage.textContent = "Código incorrecto.";
+    giftCodeMessage.className = "shell-giftcode-message error";
+    giftCodeInput.classList.add("shake");
+    setTimeout(() => giftCodeInput.classList.remove("shake"), 300);
+  }
+}
+
+giftCodeBtn.addEventListener("click", redeemGiftCode);
+giftCodeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") redeemGiftCode();
+});
 
 /* ---------- Ajustes ---------- */
 
