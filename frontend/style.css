@@ -432,22 +432,103 @@ header h1,
   margin-bottom: 10px;
 }
 
-#name-input {
-  display: block;
-  width: 100%;
-  background: var(--input-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  color: var(--text);
-  font-size: 1rem;
-  font-family: inherit;
-  margin-bottom: 22px;
+/* Cabecera de Perfil: avatar grande + nombre + resumen */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
-#name-input:focus {
+.profile-avatar-preview {
+  width: 84px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.6rem;
+  background: var(--input-bg);
+  border: 3px solid var(--card-border);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-name-input {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+}
+
+.profile-name-input:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.profile-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.profile-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-chip:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-chip strong {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-chip small {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* Icono de moneda dibujado en CSS: evita que algunas fuentes de emoji
+   (p. ej. en iOS) rendericen 🪙 con un tono plateado en vez de dorado. */
+.coin-icon {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff6c8 0%, #ffd452 35%, #f6a700 70%, #b6790a 100%);
+  box-shadow: inset 0 -2px 2px rgba(120, 72, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.65),
+    0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 /* Selector de avatar */
@@ -1392,6 +1473,9 @@ body.shell-mode > .app > footer.site-footer {
 }
 
 .shell-coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 700;
   background: var(--shell-glass-bg);
   border: 1px solid var(--shell-glass-border);
@@ -1488,6 +1572,9 @@ body.shell-mode > .app > footer.site-footer {
 }
 
 .shell-theme-card small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.72rem;
   color: var(--shell-muted);
 }

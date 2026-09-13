@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5" />
+  <link rel="stylesheet" href="/static/style.css?v=6" />
 </head>
 <body>
   <div class="app">
@@ -73,7 +73,7 @@
       <div class="shell-inner">
         <div class="shell-header-row">
           <h2 class="shell-page-title">🎒 Inventario</h2>
-          <span class="shell-coins">🪙 <span id="inventory-coins">0</span></span>
+          <span class="shell-coins"><span class="coin-icon"></span> <span id="inventory-coins">0</span></span>
         </div>
 
         <p class="shell-section-label">Tu avatar equipado</p>
@@ -135,7 +135,7 @@
       <div class="shell-inner">
         <div class="shell-header-row">
           <h2 class="shell-page-title">🛍️ Tienda</h2>
-          <span class="shell-coins">🪙 <span id="shop-coins">0</span></span>
+          <span class="shell-coins"><span class="coin-icon"></span> <span id="shop-coins">0</span></span>
         </div>
         <p class="shell-section-label">Gana 10 monedas por cada victoria y desbloquea temas de color para la app.</p>
         <div id="shop-theme-grid" class="shell-grid"></div>
@@ -151,13 +151,29 @@
 
     <section id="profile-screen" class="screen hidden">
       <h2>Tu perfil</h2>
-      <label class="field-label">Tu nombre</label>
-      <input type="text" id="name-input" maxlength="20" placeholder="Jugador" autocomplete="off" />
+
+      <div class="profile-header">
+        <span id="profile-avatar-preview" class="profile-avatar-preview">🙂</span>
+        <input type="text" id="name-input" maxlength="20" placeholder="Jugador" autocomplete="off" class="profile-name-input" />
+      </div>
+
+      <div class="profile-stats-row">
+        <button type="button" id="profile-coins-chip" class="profile-chip">
+          <strong><span class="coin-icon"></span><span id="profile-coins">0</span></strong>
+          <small>Monedas</small>
+        </button>
+        <button type="button" id="profile-rank-chip" class="profile-chip">
+          <strong id="profile-rank">🥉</strong>
+          <small>Rango</small>
+        </button>
+        <button type="button" id="profile-record-chip" class="profile-chip">
+          <strong id="profile-record">0-0</strong>
+          <small>V-D</small>
+        </button>
+      </div>
 
       <label class="field-label">Elige tu avatar</label>
       <div id="avatar-picker" class="avatar-picker"></div>
-
-      <p id="stats-summary" class="muted hidden"></p>
 
       <button type="button" id="profile-save-btn" class="primary-btn">Guardar</button>
       <button type="button" id="profile-back-btn" class="link-btn">← Volver</button>
@@ -375,6 +391,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="/static/app.js?v=5"></script>
+  <script src="/static/app.js?v=6"></script>
 </body>
 </html>

@@ -274,16 +274,6 @@ function writeStats(stats) {
   }
 }
 
-function refreshStatsSummary() {
-  const stats = readStats();
-  if (stats.wins + stats.losses === 0) {
-    statsSummary.classList.add("hidden");
-    return;
-  }
-  statsSummary.textContent = `Tus estadísticas: ${stats.wins} victorias · ${stats.losses} derrotas`;
-  statsSummary.classList.remove("hidden");
-}
-
 /* ---------- Sesión (para reconectar tras recargar) ---------- */
 
 function saveSession() {
@@ -361,7 +351,13 @@ document.querySelectorAll("[data-nav]").forEach((btn) => {
 
 const nameInput = document.getElementById("name-input");
 const avatarPicker = document.getElementById("avatar-picker");
-const statsSummary = document.getElementById("stats-summary");
+const profileAvatarPreview = document.getElementById("profile-avatar-preview");
+const profileCoinsEl = document.getElementById("profile-coins");
+const profileRankEl = document.getElementById("profile-rank");
+const profileRecordEl = document.getElementById("profile-record");
+const profileCoinsChip = document.getElementById("profile-coins-chip");
+const profileRankChip = document.getElementById("profile-rank-chip");
+const profileRecordChip = document.getElementById("profile-record-chip");
 const profileSaveBtn = document.getElementById("profile-save-btn");
 const profileBackBtn = document.getElementById("profile-back-btn");
 
@@ -377,13 +373,34 @@ AVATAR_OPTIONS.forEach((emoji) => {
     avatarPicker.querySelectorAll(".avatar-option").forEach((b) => b.classList.remove("selected"));
     btn.classList.add("selected");
     writeLS("n1v1_avatar", emoji);
+    profileAvatarPreview.textContent = emoji;
   });
   avatarPicker.appendChild(btn);
 });
 
+function refreshProfileSummary() {
+  profileAvatarPreview.textContent = selectedAvatar;
+  profileCoinsEl.textContent = readCoins();
+  const stats = readStats();
+  profileRecordEl.textContent = `${stats.wins}-${stats.losses}`;
+  profileRankEl.textContent = rankTier(stats.wins).split(" ")[1] || "🥉";
+}
+
+function goToRankingFromProfile() {
+  refreshRankingScreen();
+  showScreen("ranking");
+}
+
+profileCoinsChip.addEventListener("click", () => {
+  refreshShopScreen();
+  showScreen("shop");
+});
+profileRankChip.addEventListener("click", goToRankingFromProfile);
+profileRecordChip.addEventListener("click", goToRankingFromProfile);
+
 function openProfile() {
   nameInput.value = readLS("n1v1_name", "");
-  refreshStatsSummary();
+  refreshProfileSummary();
   showScreen("profile");
 }
 
@@ -498,7 +515,13 @@ function renderThemeCard(theme, { showPrice }) {
   card.type = "button";
   card.className = "shell-theme-card" + (isEquipped ? " equipped" : "");
   card.style.setProperty("--swatch", theme.accent);
-  const status = isEquipped ? "Equipado" : isOwned ? "Equipar" : showPrice ? `🪙 ${theme.price}` : "Bloqueado";
+  const status = isEquipped
+    ? "Equipado"
+    : isOwned
+    ? "Equipar"
+    : showPrice
+    ? `<span class="coin-icon"></span> ${theme.price}`
+    : "Bloqueado";
   card.innerHTML = `<span class="shell-theme-swatch"></span><strong>${theme.label}</strong><small>${status}</small>`;
 
   card.addEventListener("click", () => {
